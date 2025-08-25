@@ -1,0 +1,3362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planificación de Personal</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Header principal arriba del todo */
+        .main-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .main-header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+        
+        .logs-leyenda-btn {
+            background: #6c757d;
+            color: white;
+            border: 1px solid #5a6268;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .logs-leyenda-btn:hover {
+            background: #5a6268;
+            border-color: #545b62;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(108, 117, 125, 0.3);
+        }
+
+        /* Botón flotante discreto para logs */
+        .floating-logs-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 56px;
+            height: 56px;
+            background: rgba(108, 117, 125, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .floating-logs-btn:hover {
+            background: rgba(108, 117, 125, 1);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+        }
+
+        .floating-logs-btn:active {
+            transform: translateY(-1px);
+        }
+
+
+
+
+
+        /* Panel derecho - Calendario */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .header {
+            padding: 20px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #212529;
+            margin-right: 20px;
+        }
+        
+        .filters-wrapper {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 20px 30px;
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            justify-content: space-between;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 180px;
+            align-items: center;
+        }
+
+
+        
+        .filter-group label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #6c757d;
+        }
+        
+        select, button, .search-input {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            color: #495057;
+            transition: all 0.2s;
+        }
+
+        .search-input {
+            width: 300px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>');
+            background-repeat: no-repeat;
+            background-position: 10px center;
+            background-size: 16px;
+            padding-left: 35px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        .search-input::placeholder {
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        select {
+            width: 250px;
+        }
+        
+        select:focus, button:focus {
+            outline: none;
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        button:hover {
+            background: #0056b3;
+            border-color: #0056b3;
+        }
+
+        /* Botón de centrado del día actual */
+        .center-today-btn {
+            background: #007bff !important;
+            border-color: #007bff !important;
+            font-weight: 500;
+            width: 90px;
+            height: 38px;
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+
+
+
+
+
+        .center-today-btn:hover {
+            background: #0056b3 !important;
+            border-color: #0056b3 !important;
+        }
+
+
+
+        /* Dropdown personalizado */
+        .custom-dropdown {
+            position: relative;
+            min-width: 250px;
+            width: 250px;
+        }
+
+        .dropdown-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            user-select: none;
+            transition: border-color 0.2s;
+        }
+
+        .dropdown-header:hover {
+            border-color: #80bdff;
+        }
+
+        .dropdown-header.active {
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        .dropdown-text {
+            font-size: 14px;
+            color: #495057;
+        }
+
+        .dropdown-content {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            margin-top: 2px;
+        }
+
+        .dropdown-content.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f3f4;
+            transition: background-color 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item.selected {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+
+        /* Calendario */
+        .calendar-container {
+            flex: 1;
+            overflow-x: auto;
+            overflow-y: hidden;
+            position: relative;
+            width: 100%;
+            min-width: 0;
+            /* Crear contexto de apilamiento para sticky elements */
+            isolation: isolate;
+        }
+
+        .calendar-grid {
+            display: grid;
+            min-width: max-content;
+            box-sizing: border-box;
+            grid-auto-flow: row;
+            /* Asegurar que el grid no interfiera con sticky */
+            position: relative;
+        }
+
+        .header-cell {
+            padding: 8px 4px;
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            border-bottom: 1px solid #e9ecef;
+            text-align: center;
+            font-weight: 500;
+            font-size: 11px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .header-cell:first-child {
+            min-width: 300px;
+            width: 300px;
+            padding: 8px 16px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            left: 0;
+            z-index: 20;
+            background: #f8f9fa;
+            /* El header del personal se mantiene fijo durante el scroll horizontal */
+            /* Asegurar que el elemento sticky funcione correctamente */
+            will-change: transform;
+        }
+
+        .person-row {
+            display: contents;
+        }
+
+        .person-info-cell {
+            padding: 8px 16px;
+            border-right: 1px solid #e9ecef;
+            border-bottom: 1px solid #e9ecef;
+            background: white;
+            min-width: 300px;
+            width: 300px;
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            /* La columna del personal se mantiene fija durante el scroll horizontal */
+            /* Asegurar que el elemento sticky funcione correctamente */
+            will-change: transform;
+        }
+
+        .person-info-cell.clickable {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            position: sticky;
+            /* Mantener sticky incluso cuando clickable */
+            left: 0;
+            z-index: 10;
+        }
+
+        .person-info-cell.clickable:hover {
+            background-color: #f8f9fa;
+        }
+
+        .person-actions {
+            position: absolute;
+            top: 8px;
+            right: 16px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .person-info-cell.clickable:hover .person-actions {
+            opacity: 1;
+        }
+
+        .edit-icon {
+            font-size: 14px;
+            color: #007bff;
+        }
+        
+        .person-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .person-rut {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 4px;
+        }
+        
+        .person-faena {
+            font-size: 12px;
+            color: #007bff;
+            font-weight: 500;
+        }
+        
+        .person-faena.no-faena {
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        /* Estilos para múltiples faenas */
+        .person-faena:not(.no-faena) {
+            position: relative;
+        }
+
+        .person-faena:not(.no-faena):hover::after {
+            content: "Click para ver detalles";
+            position: absolute;
+            top: -25px;
+            left: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            white-space: nowrap;
+            z-index: 100;
+        }
+
+        .person-cargo {
+            font-size: 12px;
+            color: #ff8c00;
+            font-weight: 500;
+        }
+
+        /* Scrollbar personalizado para el calendario */
+        .calendar-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .calendar-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .calendar-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .calendar-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Para Firefox */
+        .calendar-container {
+            scrollbar-width: thin;
+            scrollbar-color: #c1c1c1 #f1f1f1;
+        }
+
+        /* Asegurar que sticky funcione en todos los navegadores */
+        .person-info-cell,
+        .header-cell:first-child {
+            /* Fallback para navegadores con problemas de sticky en grid */
+            -webkit-position: sticky;
+            position: sticky;
+            -webkit-left: 0;
+            left: 0;
+        }
+
+        /* Media queries para pantallas pequeñas */
+        @media (max-width: 1200px) {
+            .header-cell:first-child,
+            .person-info-cell {
+                min-width: 250px;
+                width: 250px;
+            }
+            
+            .day-cell {
+                min-width: 50px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-cell:first-child,
+            .person-info-cell {
+                min-width: 200px;
+                width: 200px;
+            }
+            
+            .day-cell {
+                min-width: 45px;
+            }
+            
+            .person-name {
+                font-size: 14px;
+            }
+            
+            .person-rut,
+            .person-faena,
+            .person-cargo {
+                font-size: 11px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-cell:first-child,
+            .person-info-cell {
+                min-width: 180px;
+                width: 180px;
+        }
+        
+        .day-cell {
+                min-width: 40px;
+            }
+            
+            .person-name {
+                font-size: 13px;
+            }
+            
+            .person-rut,
+            .person-faena,
+            .person-cargo {
+                font-size: 10px;
+            }
+        }
+
+        /* Indicador de scroll horizontal */
+        .scroll-hint {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 100;
+            pointer-events: none;
+            animation: fadeInOut 3s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        .day-cell {
+            padding: 2px;
+            border-right: 1px solid #e9ecef;
+            border-bottom: 1px solid #e9ecef;
+            background: white;
+            min-width: 60px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .day-number {
+            font-size: 12px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .day-name {
+            font-size: 9px;
+            color: #6c757d;
+            text-align: center;
+            margin-top: 1px;
+        }
+        
+        .status-badge {
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 500;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-height: 16px;
+            min-width: 40px;
+            line-height: 1.2;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status-secondary {
+            font-size: 10px;
+            padding: 2px 4px;
+            opacity: 1;
+            min-height: 16px;
+            line-height: 1.2;
+        }
+
+        /* Estados clickeables */
+        .clickable-estado {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .clickable-estado:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            z-index: 5;
+        }
+
+        .clickable-estado:active {
+            transform: scale(0.98);
+        }
+        
+        .status-disponible {
+            background-color: #808080; /* Gris */
+            color: #ffffff;
+        }
+        
+        .status-en_faena {
+            background-color: #87CEEB; /* Celeste */
+            color: #000080;
+        }
+        
+        .status-turno {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-permiso {
+            background-color: #FFA500; /* Naranjo */
+            color: #000000;
+        }
+
+        .status-licencia {
+            background-color: #FA8072; /* Salmón */
+            color: #000000;
+        }
+
+        .status-vacaciones {
+            background-color: #FFFF00; /* Amarillo */
+            color: #000000;
+        }
+
+        .status-descanso {
+            background-color: #90EE90; /* Verde */
+            color: #000000;
+        }
+
+        .no-data-message {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        /* Indicador de búsqueda */
+        .search-info-row {
+            display: contents;
+        }
+
+        .search-info-cell {
+            grid-column: 1;
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #1976d2;
+            font-weight: 500;
+        }
+
+        .clear-search-btn {
+            background: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .clear-search-btn:hover {
+            background: #1565c0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        /* Leyenda de Estados */
+        .estados-leyenda {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-left: auto;
+            justify-content: space-between;
+        }
+
+        /* Leyenda de estados en línea separada */
+        .estados-leyenda-separada {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px 40px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            border-bottom: 1px solid #dee2e6;
+            margin: 0;
+            overflow-x: auto;
+            white-space: nowrap;
+            justify-content: center;
+        }
+
+        .estados-leyenda-separada .leyenda-grupo {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 8px 16px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        /* Estilos responsivos para filtros y leyenda */
+        @media (max-width: 1400px) {
+            .filters {
+                gap: 15px;
+                padding: 18px 25px;
+            }
+            
+            .filter-group {
+                min-width: 160px;
+            }
+            
+            .search-input {
+                width: 250px;
+            }
+            
+            select {
+                width: 220px;
+            }
+            
+            .custom-dropdown {
+                min-width: 220px;
+                width: 220px;
+            }
+            
+            .estados-leyenda-separada {
+                gap: 15px;
+                padding: 18px 35px;
+            }
+            
+            .estados-leyenda-separada .leyenda-grupo {
+                min-width: 110px;
+                padding: 6px 14px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .filters {
+                gap: 12px;
+                padding: 15px 20px;
+            }
+            
+            .filter-group {
+                min-width: 140px;
+            }
+            
+            .search-input {
+                width: 200px;
+            }
+            
+            select {
+                width: 180px;
+            }
+            
+            .custom-dropdown {
+                min-width: 180px;
+                width: 180px;
+            }
+            
+            .estados-leyenda-separada {
+                gap: 12px;
+                padding: 15px 30px;
+            }
+            
+            .estados-leyenda-separada .leyenda-grupo {
+                min-width: 100px;
+                padding: 5px 12px;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .filters {
+                gap: 10px;
+                padding: 12px 15px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .filter-group {
+                min-width: 120px;
+                margin-bottom: 10px;
+            }
+            
+            .search-input {
+                width: 180px;
+            }
+            
+            select {
+                width: 160px;
+            }
+            
+            .custom-dropdown {
+                min-width: 160px;
+                width: 160px;
+            }
+            
+            .estados-leyenda-separada {
+                gap: 10px;
+                padding: 12px 25px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .estados-leyenda-separada .leyenda-grupo {
+                min-width: 90px;
+                padding: 4px 10px;
+                margin-bottom: 8px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .filters {
+                gap: 8px;
+                padding: 10px 12px;
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .filter-group {
+                min-width: 100%;
+                max-width: 300px;
+                margin-bottom: 8px;
+            }
+            
+            .search-input {
+                width: 100%;
+                max-width: 300px;
+            }
+            
+            select {
+                width: 100%;
+                max-width: 300px;
+            }
+            
+            .custom-dropdown {
+                min-width: 100%;
+                max-width: 300px;
+                width: 100%;
+            }
+            
+            .estados-leyenda-separada {
+                gap: 8px;
+                padding: 10px 20px;
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .estados-leyenda-separada .leyenda-grupo {
+                min-width: 100%;
+                max-width: 200px;
+                padding: 8px 15px;
+                margin-bottom: 6px;
+            }
+        }
+
+
+        
+
+
+        .leyenda-titulo {
+            font-size: 12px;
+            font-weight: 500;
+            color: #6c757d;
+        }
+
+        .leyenda-grupo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            background: white;
+        }
+
+        .leyenda-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .leyenda-texto {
+            font-size: 11px;
+            color: #495057;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        /* Estilos para información de estados */
+        .estado-info {
+            padding: 0;
+            background: none;
+            border-radius: 0;
+            margin-bottom: 0;
+            border: none;
+            box-shadow: none;
+        }
+
+        .estado-info h4 {
+            margin: 0 0 20px 0;
+            color: #212529;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .estado-details {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .estado-details p {
+            margin: 10px 0;
+            color: #495057;
+            font-size: 14px;
+            line-height: 1.5;
+            padding: 8px 0;
+            background: none;
+            border-radius: 0;
+            border-left: none;
+            transition: none;
+        }
+
+        .estado-details p:hover {
+            background: none;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .estado-details strong {
+            color: #212529;
+            font-weight: 600;
+            display: inline-block;
+            min-width: 100px;
+            margin-right: 8px;
+        }
+
+        /* Estilos específicos para el modal de estados */
+        .estado-modal-content {
+            max-width: 450px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .estado-modal-header {
+            background: #007bff;
+            color: white;
+            padding: 15px 20px;
+            border-bottom: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .estado-modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .estado-modal-body {
+            padding: 20px;
+            background: white;
+        }
+
+        .estado-modal-footer {
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            padding: 15px 20px;
+            text-align: center;
+        }
+
+        .estado-modal-footer .btn {
+            padding: 8px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .estado-modal-footer .btn:hover {
+            background: #0056b3;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Panel lateral de logs */
+        .logs-panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 400px;
+            height: 100vh;
+            background: white;
+            border-left: 2px solid #007bff;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            transform: translateX(100%);
+        }
+
+        .logs-panel.open {
+            transform: translateX(0);
+        }
+
+        .logs-panel-header {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #0056b3;
+        }
+
+        .logs-panel-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .toggle-logs-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        .toggle-logs-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .logs-panel-content {
+            height: calc(100vh - 60px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logs-filters {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            background: #f8f9fa;
+        }
+
+        .logs-search {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .logs-filter-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .logs-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .log-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .log-item:hover {
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .log-action {
+            background: #007bff;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .log-time {
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .log-user {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+
+        .log-description {
+            color: #6c757d;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .log-details {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #868e96;
+        }
+
+        .logs-panel-footer {
+            padding: 15px;
+            border-top: 1px solid #e9ecef;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logs-count {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+
+
+        /* Estilos para el selector de faenas a remover */
+        #faenaRemoveSelector {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        #faenaRemoveSelector label {
+            color: #856404;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        #faenaToRemove {
+            background: white;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 8px;
+            width: 100%;
+            margin: 8px 0;
+        }
+
+        #confirmRemoveAssignment {
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        /* Estilos para información del turno de la faena */
+        #faenaTurnoInfo {
+            border-left: 4px solid #2196F3;
+        }
+
+        .form-text {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+
+        .text-muted {
+            color: #6c757d !important;
+        }
+
+        /* Estilos para modo edición */
+        .faena-assignment h4 small {
+            font-size: 12px;
+            font-weight: normal;
+            margin-left: 8px;
+        }
+
+        /* Estilos simplificados para el formulario de asignación */
+        .faena-assignment {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            margin: 16px 0;
+        }
+
+        .faena-assignment h4 {
+            color: #2c3e50;
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 20px 0;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            background: #ffffff;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+        }
+
+        .form-control:hover {
+            border-color: #007bff;
+        }
+
+        .form-control:disabled {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .form-control:disabled:hover {
+            border-color: #e9ecef;
+        }
+
+        .help-text {
+            color: #6c757d;
+            font-size: 12px;
+            margin-top: 4px;
+            display: block;
+        }
+
+        /* Estilos para la información del turno de la faena */
+        .faena-turno-info {
+            margin: 12px 0;
+            padding: 10px 12px;
+            background: #e3f2fd;
+            border-radius: 6px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .turno-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1976d2;
+            font-size: 13px;
+        }
+
+        .turno-info i {
+            color: #2196f3;
+        }
+
+        /* Estilos para la información de fechas de la faena */
+        .faena-fechas-info {
+            margin: 12px 0;
+            padding: 12px;
+            background: #f3e5f5;
+            border-radius: 6px;
+            border: 1px solid #e1bee7;
+        }
+
+        .fechas-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .fecha-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .fecha-item:hover {
+            transform: translateX(2px);
+        }
+
+        .fecha-inicio {
+            color: #4caf50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .fecha-inicio i {
+            color: #4caf50;
+        }
+
+        .fecha-fin {
+            color: #f44336;
+            background: rgba(244, 67, 54, 0.1);
+        }
+
+        .fecha-fin i {
+            color: #f44336;
+        }
+
+        /* Estilos para el día actual en el calendario */
+        .header-cell.current-day {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+        }
+
+        .header-cell.current-day .day-number {
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .header-cell.current-day .day-name {
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        /* Línea temporal desde el día actual hacia abajo */
+        .day-cell.current-day-line {
+            background: linear-gradient(180deg, rgba(33, 150, 243, 0.15) 0%, rgba(33, 150, 243, 0.05) 100%);
+            border-left: 3px solid #2196f3;
+            position: relative;
+        }
+
+        .day-cell.current-day-line::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, rgba(33, 150, 243, 0.1) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+
+
+
+
+        /* Estilos para el estado de edición */
+        .faena-assignment.edit-mode h4 {
+            color: #28a745;
+            border-bottom-color: #28a745;
+        }
+
+        /* Estilos para campos requeridos */
+        .form-group label.required::after {
+            content: " *";
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        /* Responsive para pantallas pequeñas */
+        @media (max-width: 768px) {
+            .faena-assignment {
+                padding: 16px;
+                margin: 12px 0;
+            }
+            
+            .faena-assignment h4 {
+                font-size: 16px;
+            }
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 2% auto;
+            padding: 0;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease-out;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Responsive para pantallas pequeñas */
+        @media (max-height: 600px) {
+            .modal-content {
+                margin: 1% auto;
+                max-height: 98vh;
+            }
+            
+            .modal-body {
+                max-height: calc(98vh - 120px);
+            }
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #212529;
+            font-size: 18px;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+            max-height: calc(90vh - 140px); /* Restar header y footer */
+            scrollbar-width: thin;
+            scrollbar-color: #c1c1c1 #f1f1f1;
+        }
+
+        /* Estilos para scrollbar personalizado */
+        .modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .modal-body::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        .person-info-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .person-info-display h4 {
+            margin: 0 0 10px 0;
+            color: #212529;
+        }
+
+        .person-info-display p {
+            margin: 5px 0;
+            color: #495057;
+        }
+
+        .faena-assignment h4 {
+            margin: 0 0 15px 0;
+            color: #212529;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        .current-assignment {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .current-assignment h4 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+
+        /* Estilos para resumen compacto de faenas */
+        .faena-summary {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 8px 0;
+            border: 1px solid #ffeaa7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .faena-name {
+            color: #856404;
+            font-size: 14px;
+        }
+
+        .faena-details {
+            color: #6c757d;
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        /* Estilos para el modal de detalles del log */
+        .log-detail-info {
+            padding: 20px 0;
+        }
+
+        .log-detail-row {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .log-detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .log-detail-row strong {
+            color: #495057;
+            font-weight: 600;
+            display: inline-block;
+            width: 140px;
+            margin-right: 10px;
+        }
+
+        .log-detail-data {
+            margin-top: 8px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-detail-row span {
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        /* Estilos para hacer los logs clickeables */
+        .log-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .log-item:hover {
+            background-color: #f8f9fa;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .log-item:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Título principal arriba del todo -->
+        <div class="main-header">
+            <h1>Calendario de Planificación</h1>
+        </div>
+        
+
+        
+        <div class="right-panel">
+            <div class="header">
+                <div class="header-content">
+                    <div class="filters-wrapper">
+                    <div class="filters">
+                        <!-- Filtro de búsqueda por nombre o RUT -->
+                        <div class="filter-group">
+                            <label for="search-filter">Buscar:</label>
+                            <input type="text" id="search-filter" placeholder="Nombre o RUT..." class="search-input">
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="faena-filter">Faena:</label>
+                            <select id="faena-filter">
+                                <option value="">Todas las faenas</option>
+                            </select>
+                            
+
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Cargos:</label>
+                            <div id="cargos-dropdown" class="custom-dropdown">
+                                <div class="dropdown-header" id="cargos-dropdown-header">
+                                    <span class="dropdown-text" id="cargos-dropdown-text">Seleccionar cargos</span>
+                                    <span>▼</span>
+                                </div>
+                                <div class="dropdown-content" id="cargos-dropdown-content">
+                                    <!-- Aquí se cargarán los cargos -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Año:</label>
+                            <div style="display: flex; gap: 5px;">
+                                <button id="prev-year">‹‹</button>
+                                <span id="current-year" style="padding: 8px 12px; background: #f8f9fa; border-radius: 6px; min-width: 80px; text-align: center; border: 1px solid #ced4da;"></span>
+                                <button id="next-year">››</button>
+                            </div>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Hoy:</label>
+                            <button id="center-today" class="center-today-btn" title="Ir al día de hoy">
+                                Ir a Hoy
+                            </button>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Mes:</label>
+                            <div style="display: flex; gap: 5px;">
+                                <button id="prev-month">‹</button>
+                                <span id="current-month" style="padding: 8px 12px; background: #f8f9fa; border-radius: 6px; min-width: 100px; text-align: center; border: 1px solid #ced4da;"></span>
+                                <button id="next-month">›</button>
+                            </div>
+                        </div>
+                        
+
+                        </div>
+                    </div>
+                    
+
+                </div>
+            </div>
+            
+            <!-- Leyenda de Estados en línea separada -->
+            <div class="estados-leyenda-separada">
+                        <span class="leyenda-titulo">Estados:</span>
+                        <div class="leyenda-grupo">
+                            <div class="leyenda-item">
+                                <span class="status-badge status-disponible">Disp</span>
+                                <span class="leyenda-texto">Disponible</span>
+                            </div>
+                        </div>
+                        <div class="leyenda-grupo">
+                            <div class="leyenda-item">
+                                <span class="status-badge status-en_faena">Faena</span>
+                                <span class="leyenda-texto">En faena</span>
+                            </div>
+                        </div>
+                        <div class="leyenda-grupo">
+                            <div class="leyenda-item">
+                                <span class="status-badge status-permiso">Permiso</span>
+                                <span class="leyenda-texto">Permiso</span>
+                            </div>
+                        </div>
+                        <div class="leyenda-grupo">
+                            <div class="leyenda-item">
+                                <span class="status-badge status-licencia">Licencia</span>
+                                <span class="leyenda-texto">Licencia</span>
+                            </div>
+                        </div>
+                        <div class="leyenda-grupo">
+                            <div class="leyenda-item">
+                                <span class="status-badge status-vacaciones">Vac</span>
+                                <span class="leyenda-texto">Vacaciones</span>
+                            </div>
+                        </div>
+                        <div class="leyenda-grupo">
+                            <div class="leyenda-item">
+                                <span class="status-badge status-descanso">Descanso</span>
+                                <span class="leyenda-texto">Descanso</span>
+                    </div>
+                </div>
+            </div>
+        
+            <div class="calendar-container">
+                <div id="calendar-grid" class="calendar-grid">
+                    <!-- Aquí se generará el calendario -->
+                </div>
+                <!-- Indicador de scroll horizontal -->
+                <div class="scroll-hint" style="display: none;">
+                    <span>← Desliza horizontalmente para ver más días →</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para mostrar detalles de estados -->
+    <div id="estadoModal" class="modal">
+        <div class="modal-content estado-modal-content">
+            <div class="modal-header estado-modal-header">
+                <h3 id="estadoModalTitle">Detalles del Estado</h3>
+                <span class="close-estado">&times;</span>
+            </div>
+            <div class="modal-body estado-modal-body">
+                <div id="estadoModalContent">
+                    <!-- El contenido se llenará dinámicamente -->
+                </div>
+            </div>
+            <div class="modal-footer estado-modal-footer">
+                <button type="button" class="btn btn-secondary close-estado">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Panel lateral de logs de auditoría -->
+    <div id="logsPanel" class="logs-panel">
+        <div class="logs-panel-header">
+            <h3>📋 Logs de Auditoría</h3>
+            <button id="toggleLogsPanel" class="toggle-logs-btn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        </div>
+        <div class="logs-panel-content">
+            <div class="logs-filters">
+                <input type="text" id="logsSearch" placeholder="🔍 Buscar en logs..." class="logs-search">
+                <select id="logsActionFilter" class="logs-filter-select">
+                    <option value="">Todas las acciones</option>
+                    <option value="asignar">Asignar</option>
+                    <option value="remover">Remover</option>
+                    <option value="editar">Editar</option>
+                    <option value="crear">Crear</option>
+                </select>
+            </div>
+            <div class="logs-list" id="logsList">
+                <!-- Los logs se cargarán dinámicamente -->
+            </div>
+            <div class="logs-panel-footer">
+                <button id="refreshLogs" class="btn btn-primary btn-sm">
+                    <i class="fas fa-sync-alt"></i> Actualizar
+                </button>
+
+                <span class="logs-count" id="logsCount">0 logs</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón flotante discreto para logs -->
+    <button id="openLogsBtn" class="floating-logs-btn" title="Ver Logs de Auditoría">
+        📋
+    </button>
+
+    <script>
+        $(document).ready(function() {
+            // Cachear selectores jQuery para mejor performance
+            const $faena = $('#faena-filter');
+            const $searchFilter = $('#search-filter');
+            const $cargosDropdownHeader = $('#cargos-dropdown-header');
+            const $cargosDropdownContent = $('#cargos-dropdown-content');
+            const $cargosDropdownText = $('#cargos-dropdown-text');
+            const $calendarGrid = $('#calendar-grid');
+            const $currentMonth = $('#current-month');
+            const $currentYear = $('#current-year');
+            
+            // Estado de la aplicación
+            const state = {
+                month: new Date().getMonth() + 1,
+                year: new Date().getFullYear(),
+                days: getDaysInMonth(new Date().getFullYear(), new Date().getMonth() + 1),
+                personas: [],
+                todasLasPersonas: [], // Almacenar todas las personas para filtrado local
+                filtros: {
+                    faena: '',
+                    cargos: [],
+                    busqueda: ''
+                }
+            };
+
+            // Función para obtener días en un mes
+            function getDaysInMonth(year, month) {
+                return new Date(year, month, 0).getDate();
+            }
+
+            // Función helper para obtener información de la fecha actual
+            function getCurrentDateInfo() {
+                const today = new Date();
+                return {
+                    day: today.getDate(),
+                    month: today.getMonth() + 1,
+                    year: today.getFullYear()
+                };
+            }
+            
+            // Función para obtener nombre del mes
+            function getMonthName(month) {
+                const months = [
+                    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                ];
+                return months[month - 1];
+            }
+            
+            // Cargar filtros
+            function loadFilters() {
+                // Cargar faenas
+                $.get('/get_faenas/')
+                    .done(function(response) {
+                        // Almacenar datos de faenas globalmente para usar en otras funciones
+                        window.faenasData = response.results;
+                        
+                        $faena.empty().append('<option value="">Todas las faenas</option>');
+                        response.results.forEach(faena => {
+                            $faena.append(`<option value="${faena.id}">${faena.nombre}</option>`);
+                        });
+                        
+                        // Seleccionar "Todas las faenas" por defecto
+                        $faena.val('');
+                        
+                        // Refrescar inmediatamente después de cargar las faenas
+                        refresh();
+                    })
+                    .fail(function() {
+                        console.error('Error al cargar faenas');
+                    });
+                
+                // Cargar cargos
+                $.get('/get_cargos/')
+                    .done(function(response) {
+                        $cargosDropdownContent.empty();
+                        
+                        // Opción "Todos los cargos"
+                        $cargosDropdownContent.append(`
+                            <div class="dropdown-item">
+                                <input type="checkbox" id="cargo-all" value="all" checked>
+                                <label for="cargo-all">Todos los cargos</label>
+                            </div>
+                        `);
+                        
+                        // Cargos individuales
+                        response.results.forEach(cargo => {
+                            $cargosDropdownContent.append(`
+                                <div class="dropdown-item">
+                                    <input type="checkbox" id="cargo-${cargo.id}" value="${cargo.id}" checked>
+                                    <label for="cargo-${cargo.id}">${cargo.nombre}</label>
+                                </div>
+                            `);
+                        });
+                        
+                        // Inicializar estado con todas las faenas y todos los cargos seleccionados
+                        state.filtros.faena = '';
+                        state.filtros.cargos = response.results.map(c => c.id);
+                        
+                        // Refrescar inmediatamente después de cargar los filtros
+                        refresh();
+                    })
+                    .fail(function() {
+                        console.error('Error al cargar cargos');
+                    });
+            }
+
+
+            
+            // Renderizar calendario completo
+            function renderCalendar(estados) {
+                $calendarGrid.empty();
+                
+                // Establecer dinámicamente el grid basado en el número de días
+                const gridTemplate = `300px repeat(${state.days}, minmax(40px, 1fr))`;
+                $calendarGrid.css('grid-template-columns', gridTemplate);
+                
+                // Renderizar header
+                const headerRow = $('<div class="person-row"></div>');
+                
+                // Celda del header para información del personal
+                headerRow.append('<div class="header-cell">Personal</div>');
+                
+                // Headers de días
+                const currentDate = getCurrentDateInfo();
+                
+                for (let day = 1; day <= state.days; day++) {
+                    const date = new Date(state.year, state.month - 1, day);
+                    const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' });
+                    
+                    // Verificar si es el día actual
+                    const isCurrentDay = (day === currentDate.day && state.month === currentDate.month && state.year === currentDate.year);
+                    const currentDayClass = isCurrentDay ? 'current-day' : '';
+                    
+                    headerRow.append(`
+                        <div class="header-cell ${currentDayClass}">
+                            <div class="day-number">${day}</div>
+                            <div class="day-name">${dayName}</div>
+                        </div>
+                    `);
+                }
+                
+                $calendarGrid.append(headerRow);
+                
+                // Si no hay personal, mostrar mensaje pero mantener la estructura
+                if (state.personas.length === 0) {
+                    const noDataRow = $('<div class="person-row"></div>');
+                    noDataRow.append(`
+                        <div class="person-info-cell">
+                            <div class="no-data-message">
+                                ${state.filtros.busqueda ? 
+                                    `No se encontraron personas que coincidan con "${state.filtros.busqueda}"` : 
+                                    'No hay personal para mostrar'
+                                }
+                            </div>
+                        </div>
+                    `);
+                    
+                    // Agregar celdas vacías para mantener el grid
+                    const currentDate = getCurrentDateInfo();
+                    
+                    for (let day = 1; day <= state.days; day++) {
+                        // Verificar si es el día actual para aplicar la línea temporal
+                        const isCurrentDay = (day === currentDate.day && state.month === currentDate.month && state.year === currentDate.year);
+                        const currentDayLineClass = isCurrentDay ? 'current-day-line' : '';
+                        
+                        noDataRow.append(`
+                            <div class="day-cell ${currentDayLineClass}">
+                                <div class="status-badge status-disponible">-</div>
+                            </div>
+                        `);
+                    }
+                    
+                    $calendarGrid.append(noDataRow);
+                } else {
+                    // Renderizar filas de personal
+                    state.personas.forEach(person => {
+                        const personRow = $('<div class="person-row"></div>');
+                        
+                        // Celda de información del personal (clickeable)
+                        let faenaInfo = '';
+                        if (person.faenas_detalladas && person.faenas_detalladas.length > 0) {
+                            if (person.faenas_detalladas.length === 1) {
+                                faenaInfo = `FAENA: ${person.faenas_detalladas[0].nombre}`;
+                            } else {
+                                faenaInfo = `FAENAS: ${person.faenas_detalladas.length} asignaciones`;
+                            }
+                        } else {
+                            faenaInfo = 'SIN ASIGNAR';
+                        }
+                        
+                        personRow.append(`
+                            <div class="person-info-cell clickable" data-person-id="${person.id}" data-person-name="${person.nombre}" data-person-faena="${person.faena_actual || ''}">
+                                <div class="person-name">${person.nombre}</div>
+                                <div class="person-rut">${person.rut}</div>
+                                <div class="person-faena ${person.faenas_detalladas && person.faenas_detalladas.length > 0 ? '' : 'no-faena'}">${faenaInfo}</div>
+                                ${person.cargo_actual ? `<div class="person-cargo">${person.cargo_actual}</div>` : ''}
+                                <div class="person-actions">
+                                    <span class="edit-icon">✏️</span>
+                                </div>
+                            </div>
+                        `);
+                        
+                        // Celdas de días
+                        const currentDate = getCurrentDateInfo();
+                        
+                        for (let day = 1; day <= state.days; day++) {
+                            const dayStr = String(day);
+                            const estadosDelDia = estados[person.id] && estados[person.id][dayStr];
+                            
+                            // Verificar si es el día actual para aplicar la línea temporal
+                            const isCurrentDay = (day === currentDate.day && state.month === currentDate.month && state.year === currentDate.year);
+                            const currentDayLineClass = isCurrentDay ? 'current-day-line' : '';
+                            
+                            let statusHTML = '';
+                            
+                            if (estadosDelDia && estadosDelDia.length > 0) {
+                                // Ordenar estados por prioridad (menor número = mayor prioridad visual = se muestra ARRIBA)
+                                // Prioridad 1: Estados base (disponible, en faena, descanso) - Se muestran ARRIBA
+                                // Prioridad 2: Estados secundarios (turno, vacaciones, permiso) - Se muestran ABAJO
+                                // Prioridad 3: Estados de alta prioridad (licencia médica) - Se muestran AL FINAL
+                                const estadosOrdenados = estadosDelDia.sort((a, b) => (a.prioridad || 0) - (b.prioridad || 0));
+                                
+                                // Mostrar múltiples estados
+                                estadosOrdenados.forEach((estado, index) => {
+                                    const statusClass = `status-${estado.tipo}`;
+                                    const statusText = estado.texto;
+                                    const estadoDetalles = estado.detalles || {};
+                                    
+
+                                    
+                                    // Crear atributos de datos para el estado clickeable
+                                    const dataAttrs = `data-estado-tipo="${estado.tipo}" data-estado-texto="${statusText}"`;
+                                    const detallesAttrs = estadoDetalles ? `data-estado-detalles='${JSON.stringify(estadoDetalles)}'` : '';
+                                    
+                                    // Si es el primer estado, mostrar completo, si no, mostrar abreviado
+                                    if (index === 0) {
+                                        statusHTML += `<div class="status-badge ${statusClass} clickable-estado" ${dataAttrs} ${detallesAttrs}>${statusText}</div>`;
+                                    } else {
+                                        // Para estados adicionales, usar el texto del backend (ya abreviado)
+                                        statusHTML += `<div class="status-badge ${statusClass} status-secondary clickable-estado" ${dataAttrs} ${detallesAttrs}>${estado.texto}</div>`;
+                                    }
+                                });
+                            } else {
+                                // Estado por defecto si no hay estados
+                                statusHTML = '<div class="status-badge status-disponible">Disp</div>';
+                            }
+                            
+                            personRow.append(`
+                                <div class="day-cell ${currentDayLineClass}">
+                                    ${statusHTML}
+                                </div>
+                            `);
+                        }
+                        
+                        $calendarGrid.append(personRow);
+                    });
+                }
+                
+                $currentMonth.text(getMonthName(state.month));
+                $currentYear.text(state.year);
+                
+                // Auto-centrar el día actual en la vista después de renderizar
+                centerCurrentDay();
+            }
+            
+            // Función para ir al día de hoy (navegación completa)
+            function goToToday() {
+                const currentDate = getCurrentDateInfo();
+                
+                // Verificar si necesitamos cambiar de mes/año
+                const needsNavigation = (state.month !== currentDate.month || state.year !== currentDate.year);
+                
+                if (needsNavigation) {
+                    // Cambiar al mes y año actual
+                    state.month = currentDate.month;
+                    state.year = currentDate.year;
+                    state.days = getDaysInMonth(state.year, state.month);
+                    
+                    // Refrescar el calendario
+                    refresh();
+                    
+                    // Después de refrescar, centrar en el día actual (solo si es el mes actual)
+                    setTimeout(() => {
+                        centerCurrentDay();
+                    }, 500);
+                } else {
+                    // Solo centrar si ya estamos en el mes/año correcto
+                    centerCurrentDay();
+                }
+            }
+
+            // Función para centrar el día actual en la vista (solo scroll)
+            function centerCurrentDay() {
+                const currentDate = getCurrentDateInfo();
+                
+                // Solo hacer scroll si estamos en el mes y año actual
+                if (state.month !== currentDate.month || state.year !== currentDate.year) {
+                    return;
+                }
+                
+                const calendarContainer = $('.calendar-container');
+                const dayWidth = $('.day-cell').first().outerWidth();
+                const containerWidth = calendarContainer.width();
+                
+                if (dayWidth && containerWidth) {
+                    // Calcular la posición del día actual (restar 1 porque los días empiezan en 1)
+                    const dayPosition = (currentDate.day - 1) * dayWidth;
+                    
+                    // Calcular el scroll óptimo para centrar
+                    const optimalScroll = dayPosition - (containerWidth / 2) + (dayWidth / 2);
+                    
+                    // Aplicar límites para no ir más allá del día 31
+                    const maxScroll = $('.calendar-grid').width() - containerWidth;
+                    const finalScroll = Math.max(0, Math.min(optimalScroll, maxScroll));
+                    
+                    // Aplicar scroll suavemente
+                    calendarContainer.animate({
+                        scrollLeft: finalScroll
+                    }, 800);
+                }
+            }
+            
+            // Refrescar todo
+            function refresh() {
+                        loadEstados();
+            }
+
+            // Cargar personal y estados
+            function loadEstados() {
+                $calendarGrid.html('<div class="loading">Cargando personal y estados...</div>');
+                
+                const params = {
+                    faena_id: state.filtros.faena,
+                    cargos: state.filtros.cargos
+                };
+                
+                $.get('/get_personas/', params)
+                    .done(function(response) {
+                        // Guardar todas las personas en el estado (sin filtrar por búsqueda)
+                        state.todasLasPersonas = response.results;
+                        
+                        // Aplicar filtro de búsqueda localmente
+                        let personasFiltradas = response.results;
+                        
+                        if (state.filtros.busqueda && state.filtros.busqueda.trim() !== '') {
+                            personasFiltradas = response.results.filter(person => {
+                                const nombre = person.nombre.toLowerCase();
+                                const rut = person.rut.toLowerCase();
+                                const busqueda = state.filtros.busqueda.toLowerCase().trim();
+                                return nombre.includes(busqueda) || rut.includes(busqueda);
+                            });
+                        }
+                        
+                        state.personas = personasFiltradas;
+                        
+                        // Cargar estados para el personal
+                        const estadosParams = {
+                            month: state.month,
+                            year: state.year,
+                            'personas[]': state.personas.map(person => person.id)
+                        };
+                        
+                        $.get('/get_estados/', estadosParams)
+                            .done(function(estadosResponse) {
+                                renderCalendar(estadosResponse.results);
+                    })
+                    .fail(function() {
+                                renderCalendar({});
+                            });
+                    })
+                    .fail(function(xhr, status, error) {
+                        console.error('Error cargando personal:', error);
+                        renderCalendar({});
+                    });
+            }
+
+
+
+
+
+            // Función para aplicar filtro de búsqueda localmente
+            function applySearchFilter() {
+                if (state.filtros.busqueda && state.filtros.busqueda.trim() !== '') {
+                    state.personas = state.todasLasPersonas.filter(person => {
+                        const nombre = person.nombre.toLowerCase();
+                        const rut = person.rut.toLowerCase();
+                        const busqueda = state.filtros.busqueda.toLowerCase().trim();
+                        return nombre.includes(busqueda) || rut.includes(busqueda);
+                    });
+                } else {
+                    // Si no hay término de búsqueda, mostrar todas las personas
+                    state.personas = state.todasLasPersonas;
+                }
+                
+                // Recargar estados para las personas filtradas
+                if (state.personas.length > 0) {
+                    const estadosParams = {
+                        month: state.month,
+                        year: state.year,
+                        'personas[]': state.personas.map(person => person.id)
+                    };
+                    
+                    $.get('/get_estados/', estadosParams)
+                        .done(function(estadosResponse) {
+                            renderCalendar(estadosResponse.results);
+                        })
+                        .fail(function() {
+                            renderCalendar({});
+                        });
+                } else {
+                    // Si no hay personas que coincidan, mostrar calendario vacío
+                    renderCalendar({});
+                }
+            }
+
+            // Event listeners
+            $faena.on('change', function() {
+                state.filtros.faena = $(this).val();
+                refresh();
+            });
+
+            // Filtro de búsqueda por nombre o RUT
+            $searchFilter.on('input', function() {
+                const searchValue = $(this).val().toLowerCase().trim();
+                state.filtros.busqueda = searchValue;
+                
+                // Aplicar filtro localmente sin hacer nueva petición al backend
+                if (state.todasLasPersonas && state.todasLasPersonas.length > 0) {
+                    applySearchFilter();
+                } else {
+                    // Si no hay datos cargados, hacer refresh completo
+                    refresh();
+                }
+            });
+
+            $cargosDropdownHeader.on('click', function() {
+                $cargosDropdownContent.toggleClass('show');
+                $(this).toggleClass('active');
+            });
+
+            // Cerrar dropdown al hacer clic fuera
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.custom-dropdown').length) {
+                    $cargosDropdownContent.removeClass('show');
+                    $cargosDropdownHeader.removeClass('active');
+                }
+            });
+            
+            // Manejar cambios en checkboxes de cargos
+            $(document).on('change', 'input[type="checkbox"]', function() {
+                const $cargosDropdownContent = $('#cargos-dropdown-content');
+                const $cargoAll = $('#cargo-all');
+                const $cargosIndividuales = $cargosDropdownContent.find('input[type="checkbox"]:not(#cargo-all)');
+                
+                if ($(this).attr('id') === 'cargo-all') {
+                    // Si se marca "Todos los cargos"
+                    const allChecked = $cargoAll.is(':checked');
+                    $cargosIndividuales.prop('checked', allChecked);
+                    
+                    if (allChecked) {
+                        state.filtros.cargos = $cargosIndividuales.map(function() {
+                            return $(this).val();
+                        }).get();
+                        $cargosDropdownText.text('Todos los cargos');
+                    } else {
+                        state.filtros.cargos = [];
+                        $cargosDropdownText.text('Seleccionar cargos');
+                    }
+                } else {
+                    // Si se marca un cargo individual
+                    const allChecked = $cargosIndividuales.length === $cargosIndividuales.filter(':checked').length;
+                    $cargoAll.prop('checked', allChecked);
+                    
+                    if (allChecked) {
+                        $cargosDropdownText.text('Todos los cargos');
+                    } else {
+                        const checkedCount = $cargosIndividuales.filter(':checked').length;
+                        if (checkedCount === 0) {
+                            $cargosDropdownText.text('Seleccionar cargos');
+                        } else {
+                            $cargosDropdownText.text(`${checkedCount} cargo(s) seleccionado(s)`);
+                        }
+                    }
+                    
+                    // Actualizar estado de cargos
+                    state.filtros.cargos = $cargosIndividuales.filter(':checked').map(function() {
+                        return $(this).val();
+                    }).get();
+                }
+                
+
+                
+                refresh();
+            });
+            
+            // Navegación de meses
+            $('#prev-month').on('click', function() {
+                if (state.month > 1) {
+                    state.month--;
+                } else {
+                    state.month = 12;
+                    state.year--;
+                }
+                state.days = getDaysInMonth(state.year, state.month);
+                refresh();
+                
+                // Auto-centrar si navegamos al mes actual
+                setTimeout(centerCurrentDay, 100);
+            });
+
+            $('#next-month').on('click', function() {
+                if (state.month < 12) {
+                    state.month++;
+                } else {
+                    state.month = 1;
+                    state.year++;
+                }
+                state.days = getDaysInMonth(state.year, state.month);
+                refresh();
+                
+                // Auto-centrar si navegamos al mes actual
+                setTimeout(centerCurrentDay, 100);
+            });
+            
+            // Navegación de años
+            $('#prev-year').on('click', function() {
+                state.year--;
+                state.days = getDaysInMonth(state.year, state.month);
+                refresh();
+                
+                // Auto-centrar si navegamos al año actual
+                setTimeout(centerCurrentDay, 100);
+            });
+
+            $('#next-year').on('click', function() {
+                state.year++;
+                state.days = getDaysInMonth(state.year, state.month);
+                refresh();
+                
+                // Auto-centrar si navegamos al año actual
+                setTimeout(centerCurrentDay, 100);
+            });
+
+            // Botón de centrado manual del día actual
+            $('#center-today').on('click', function() {
+                goToToday();
+            });
+
+
+
+            // Funcionalidad de scroll horizontal
+            function checkScrollHint() {
+                const $calendarContainer = $('.calendar-container');
+                const $scrollHint = $('.scroll-hint');
+                
+                if ($calendarContainer[0].scrollWidth > $calendarContainer[0].clientWidth) {
+                    // Hay contenido que requiere scroll horizontal
+                    $scrollHint.show();
+                    
+                    // Ocultar después de 3 segundos
+                    setTimeout(() => {
+                        $scrollHint.hide();
+                    }, 3000);
+                } else {
+                    $scrollHint.hide();
+                }
+            }
+            
+            // Verificar scroll hint cuando se redimensiona la ventana
+            $(window).on('resize', function() {
+                setTimeout(checkScrollHint, 100);
+            });
+            
+            // Verificar scroll hint después de renderizar el calendario
+            const originalRenderCalendar = window.renderCalendar;
+            window.renderCalendar = function(estados) {
+                originalRenderCalendar(estados);
+                setTimeout(checkScrollHint, 100);
+            };
+            
+            // Funcionalidad del Modal
+            const $modal = $('#personModal');
+            const $modalTitle = $('#modalTitle');
+            const $modalPersonName = $('#modalPersonName');
+            const $modalPersonRut = $('#modalPersonRut');
+            const $modalPersonCargo = $('#modalPersonCargo');
+            const $faenaSelect = $('#faenaSelect');
+            const $turnoSelect = $('#turnoSelect');
+            const $fechaInicio = $('#fechaInicio');
+            const $currentAssignment = $('#currentAssignment');
+            const $currentAssignmentInfo = $('#currentAssignmentInfo');
+            const $saveAssignment = $('#saveAssignment');
+            const $removeAssignment = $('#removeAssignment');
+            const $cancelAssignment = $('#cancelAssignment');
+            const $closeModal = $('.close');
+
+            // Funcionalidad del Modal de Estados
+            const $estadoModal = $('#estadoModal');
+            const $estadoModalTitle = $('#estadoModalTitle');
+            const $estadoModalContent = $('#estadoModalContent');
+            const $closeEstadoModal = $('.close-estado');
+
+            let currentPerson = null;
+
+            // Cargar turnos para el select
+            function loadTurnos() {
+                $.get('/get_turnos/')
+                    .done(function(response) {
+                        $turnoSelect.empty().append('<option value="">-- Usar turno de la faena --</option>');
+                        
+                        if (response.results && response.results.length > 0) {
+                            response.results.forEach(turno => {
+                                $turnoSelect.append(`<option value="${turno.tipo_turno_id}">${turno.nombre}</option>`);
+                            });
+                        }
+                        
+                        // Verificar si la faena seleccionada es "Sin Asignar" y deshabilitar turnos
+                        const faenaSeleccionada = $faenaSelect.val();
+                        if (faenaSeleccionada === 'sin_asignar') {
+                            $turnoSelect.prop('disabled', true);
+                            $turnoSelect.val('');
+                        } else {
+                            $turnoSelect.prop('disabled', false);
+                        }
+                    })
+                    .fail(function(xhr, status, error) {
+                        // Error silencioso al cargar turnos
+                    });
+            }
+
+            // Mostrar turno y fechas de la faena seleccionada
+            function showFaenaTurno(faenaId) {
+                if (faenaId === 'sin_asignar') {
+                    $('#faenaTurnoActual').text('No aplica');
+                    $('#faenaTurnoInfo').show();
+                    $('#faenaFechasInfo').hide();
+                    return;
+                }
+                
+                $.get(`/get_faena_turno/${faenaId}/`)
+                    .done(function(response) {
+                        if (response.success) {
+                            // Mostrar información del turno
+                            const turnoInfo = response.turno || 'No especificado';
+                            $('#faenaTurnoActual').text(turnoInfo);
+                            $('#faenaTurnoInfo').show();
+                            
+                            // Mostrar información de fechas
+                            const fechaInicio = response.fecha_inicio || 'No especificada';
+                            const fechaFin = response.fecha_fin || 'No especificada';
+                            
+                            $('#faenaFechaInicio').text(fechaInicio);
+                            $('#faenaFechaFin').text(fechaFin);
+                            $('#faenaFechasInfo').show();
+                        } else {
+                            $('#faenaTurnoActual').text('No especificado');
+                            $('#faenaTurnoInfo').show();
+                            $('#faenaFechasInfo').hide();
+                        }
+                    })
+                    .fail(function() {
+                        $('#faenaTurnoActual').text('Error al cargar');
+                        $('#faenaTurnoInfo').show();
+                        $('#faenaFechasInfo').hide();
+                    });
+            }
+
+            // Abrir modal al hacer clic en una celda del personal
+            $(document).on('click', '.person-info-cell.clickable', function() {
+                const personId = $(this).data('person-id');
+                const personName = $(this).data('person-name');
+                const personFaena = $(this).data('person-faena');
+                
+                // Buscar la persona en el estado actual
+                currentPerson = state.personas.find(p => p.id == personId);
+                
+                if (currentPerson) {
+                    openModal(currentPerson);
+                }
+            });
+
+            // Abrir modal al hacer clic en un estado del calendario
+            $(document).on('click', '.clickable-estado', function() {
+                const tipo = $(this).data('estado-tipo');
+                const texto = $(this).data('estado-texto');
+                const detalles = $(this).data('estado-detalles');
+                
+                if (detalles) {
+                    openEstadoModal(tipo, texto, detalles);
+                }
+            });
+
+            // Abrir modal
+            function openModal(person) {
+                currentPerson = person;
+                
+                // Llenar información del personal
+                $modalPersonName.text(person.nombre);
+                $modalPersonRut.text(person.rut);
+                $modalPersonCargo.text(person.cargo_actual || 'Sin cargo');
+                
+                // Llenar select de faenas (excluyendo "SIN ASIGNAR" para asignaciones)
+                $faenaSelect.empty().append('<option value="">-- Seleccionar Faena --</option>');
+                $('#faena-filter option').each(function() {
+                    const faenaId = $(this).val();
+                    const faenaName = $(this).text();
+                    // Excluir "SIN ASIGNAR" ya que no es una faena real para asignar
+                    if (faenaId && faenaId !== 'sin_asignar') {
+                        $faenaSelect.append(`<option value="${faenaId}">${faenaName}</option>`);
+                    }
+                });
+                
+                // Event listener para mostrar turno de la faena cuando se selecciona
+                $faenaSelect.off('change').on('change', function() {
+                    const faenaId = $(this).val();
+                    if (faenaId) {
+                        showFaenaTurno(faenaId);
+                        
+                        // Deshabilitar/habilitar select de turnos según la faena
+                        if (faenaId === 'sin_asignar') {
+                            $turnoSelect.prop('disabled', true);
+                            $turnoSelect.val('');
+                        } else {
+                            $turnoSelect.prop('disabled', false);
+                        }
+                    } else {
+                        $('#faenaTurnoInfo').hide();
+                        $('#faenaFechasInfo').hide();
+                        $turnoSelect.prop('disabled', false);
+                    }
+                });
+                
+                // Cargar turnos cuando se abre el modal
+                loadTurnos();
+                
+                // Precargar datos de faena asignada si existe
+                if (person.faenas_detalladas && person.faenas_detalladas.length > 0) {
+                    // Tomar la primera faena asignada para precargar
+                    const faenaAsignada = person.faenas_detalladas[0];
+                    
+                    // Seleccionar la faena en el select
+                    $faenaSelect.val(faenaAsignada.faena_id);
+                    
+                    // Mostrar el turno de la faena
+                    showFaenaTurno(faenaAsignada.faena_id);
+                    
+                    // Seleccionar el turno personalizado si existe
+                    if (faenaAsignada.tipo_turno_id) {
+                        $turnoSelect.val(faenaAsignada.tipo_turno_id);
+                    }
+                    
+                    // Establecer la fecha de inicio
+                    if (faenaAsignada.fecha_inicio) {
+                        $fechaInicio.val(faenaAsignada.fecha_inicio);
+                    }
+                    
+                    // Cambiar el texto del botón para indicar que es una edición
+                    $saveAssignment.text('Actualizar Asignación');
+                    
+                    // Agregar indicador visual de que es una edición
+                    $('.faena-assignment h4').html('Editar Asignación de Faena <small style="color: #6c757d;">(Modo Edición)</small>');
+                    
+                    // Agregar clase para estilos de edición
+                    $('.faena-assignment').addClass('edit-mode');
+                } else {
+                    // Resetear a modo de nueva asignación
+                    $saveAssignment.text('Guardar Asignación');
+                    $('.faena-assignment h4').text('Asignación de Faena');
+                    
+                    // Remover clase de edición
+                    $('.faena-assignment').removeClass('edit-mode');
+                    
+                    // Limpiar campos
+                    $faenaSelect.val('');
+                    $turnoSelect.val('');
+                    $fechaInicio.val('');
+                    $('#faenaTurnoInfo').hide();
+                    $('#faenaFechasInfo').hide();
+                }
+                
+                // Mostrar asignación actual si existe
+                if (person.faenas_detalladas && person.faenas_detalladas.length > 0) {
+                    $currentAssignment.show();
+                    let faenasInfo = '';
+                    
+                    if (person.faenas_detalladas.length === 1) {
+                        const faena = person.faenas_detalladas[0];
+                        faenasInfo = `
+                            <div class="faena-summary">
+                                <span class="faena-name"><strong>${faena.nombre}</strong></span>
+                                <span class="faena-details">${faena.fecha_inicio || 'Sin fecha'} | ${faena.turno}</span>
+                            </div>
+                        `;
+                    } else {
+                        faenasInfo = `<p><strong>Total de faenas:</strong> ${person.faenas_detalladas.length}</p>`;
+                        person.faenas_detalladas.forEach((faena, index) => {
+                            faenasInfo += `
+                                <div class="faena-summary">
+                                    <span class="faena-name"><strong>${faena.nombre}</strong></span>
+                                    <span class="faena-details">${faena.fecha_inicio || 'Sin fecha'} | ${faena.turno}</span>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    $currentAssignmentInfo.html(faenasInfo);
+                } else {
+                    $currentAssignment.hide();
+                }
+                
+                // Ocultar selector de faenas para remover
+                $('#faenaRemoveSelector').hide();
+                $('#confirmRemoveAssignment').hide();
+                $('#removeAssignment').show();
+                
+                // Establecer fecha de inicio por defecto
+                $fechaInicio.val(new Date().toISOString().split('T')[0]);
+                
+                // Mostrar modal
+                $modal.show();
+            }
+
+            // Abrir modal de estado
+            function openEstadoModal(tipo, texto, detalles) {
+                let titulo = '';
+                let contenido = '';
+                let headerColor = '#007bff'; // Color por defecto
+                
+                // Función para obtener el color del header según el tipo de estado
+                function getHeaderColor(tipo) {
+                    const colors = {
+                        'en_faena': '#17a2b8',      // Celeste
+                        'descanso': '#28a745',       // Verde
+                        'licencia': '#dc3545',       // Rojo
+                        'vacaciones': '#ffc107',     // Amarillo
+                        'permiso': '#fd7e14',        // Naranja
+                        'ausencia': '#6c757d',       // Gris
+                        'disponible': '#6c757d',     // Gris
+                        'turno': '#fd7e14'           // Naranja
+                    };
+                    return colors[tipo] || '#007bff';
+                }
+                
+                // Obtener el color del header
+                headerColor = getHeaderColor(tipo);
+                
+                switch(tipo) {
+                    case 'en_faena':
+                        titulo = 'Información de Faena';
+                        contenido = `
+                            <div class="estado-info">
+                                <h4>Estado: ${texto}</h4>
+                                <div class="estado-details">
+                                    <p><strong>Faena:</strong> ${detalles.faena_nombre || 'No especificada'}</p>
+                                    <p><strong>Fecha de inicio:</strong> ${detalles.fecha_inicio || 'No especificada'}</p>
+                                    <p><strong>Turno:</strong> ${detalles.turno || 'No especificado'}</p>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                        
+                    case 'descanso':
+                        titulo = 'Información de Descanso';
+                        contenido = `
+                            <div class="estado-info">
+                                <h4>Estado: ${texto}</h4>
+                                <div class="estado-details">
+                                    <p><strong>Faena:</strong> ${detalles.faena_nombre || 'No especificada'}</p>
+                                    <p><strong>Fecha de inicio:</strong> ${detalles.fecha_inicio || 'No especificada'}</p>
+                                    <p><strong>Turno:</strong> ${detalles.turno || 'No especificado'}</p>
+                                    <p><strong>Nota:</strong> Este descanso es parte del ciclo de turno de la faena</p>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                        
+                    case 'licencia':
+                        titulo = 'Información de Licencia Médica';
+                        contenido = `
+                            <div class="estado-info">
+                                <h4>Estado: ${texto}</h4>
+                                <div class="estado-details">
+                                    <p><strong>Tipo:</strong> ${detalles.tipo || 'No especificado'}</p>
+                                    <p><strong>Fecha de inicio:</strong> ${detalles.fecha_inicio || 'No especificada'}</p>
+                                    <p><strong>Fecha de fin:</strong> ${detalles.fecha_fin || 'No especificada'}</p>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                        
+                    case 'vacaciones':
+                    case 'permiso':
+                    case 'ausencia':
+                        titulo = `Información de ${detalles.tipo || texto}`;
+                        contenido = `
+                            <div class="estado-info">
+                                <h4>Estado: ${texto}</h4>
+                                <div class="estado-details">
+                                    <p><strong>Tipo:</strong> ${detalles.tipo || 'No especificado'}</p>
+                                    <p><strong>Fecha de inicio:</strong> ${detalles.fecha_inicio || 'No especificada'}</p>
+                                    <p><strong>Fecha de fin:</strong> ${detalles.fecha_fin || 'No especificada'}</p>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                        
+                    default:
+                        titulo = 'Información del Estado';
+                        contenido = `
+                            <div class="estado-info">
+                                <h4>Estado: ${texto}</h4>
+                                <div class="estado-details">
+                                    <p>No hay información adicional disponible para este estado.</p>
+                                </div>
+                            </div>
+                        `;
+                }
+                
+                // Aplicar el color del header
+                $('.estado-modal-header').css('background-color', headerColor);
+                
+                $estadoModalTitle.text(titulo);
+                $estadoModalContent.html(contenido);
+                $estadoModal.show();
+            }
+
+            // Cerrar modal
+            function closeModal() {
+                $modal.hide();
+                currentPerson = null;
+                // Limpiar formulario
+                $faenaSelect.val('');
+                $turnoSelect.val('');
+                $fechaInicio.val('');
+                // Resetear a modo de nueva asignación
+                $saveAssignment.text('Guardar Asignación');
+                $('.faena-assignment h4').text('Asignación de Faena');
+                $('#faenaTurnoInfo').hide();
+                // Remover clase de edición
+                $('.faena-assignment').removeClass('edit-mode');
+            }
+
+            // Event listeners del modal
+            $closeModal.on('click', closeModal);
+            $cancelAssignment.on('click', closeModal);
+            
+            // Cerrar modal al hacer clic fuera
+            $(window).on('click', function(e) {
+                if (e.target === $modal[0]) {
+                    closeModal();
+                }
+            });
+
+            // Event listeners del modal de estados
+            $closeEstadoModal.on('click', function() {
+                $estadoModal.hide();
+            });
+            
+            // Cerrar modal de estados al hacer clic fuera
+            $(window).on('click', function(e) {
+                if (e.target === $estadoModal[0]) {
+                    $estadoModal.hide();
+                }
+            });
+
+            // Guardar asignación
+            $saveAssignment.on('click', function() {
+                if (!currentPerson) return;
+                
+                const faenaId = $faenaSelect.val();
+                const turnoId = $turnoSelect.val();
+                const fechaInicio = $fechaInicio.val();
+                
+                if (!faenaId || !fechaInicio) {
+                    alert('Por favor complete todos los campos requeridos');
+                    return;
+                }
+                
+                if (faenaId === 'sin_asignar') {
+                    alert('No se puede asignar "SIN ASIGNAR" como una faena. Por favor seleccione una faena válida.');
+                    return;
+                }
+                
+                // Determinar si es una edición o nueva asignación
+                const isEditing = currentPerson.faenas_detalladas && 
+                                 currentPerson.faenas_detalladas.length > 0 &&
+                                 currentPerson.faenas_detalladas[0].faena_id == faenaId;
+                
+                const assignmentData = {
+                    personal_id: currentPerson.id,
+                    faena_id: faenaId,
+                    turno_id: turnoId || null,
+                    fecha_inicio: fechaInicio,
+                    is_editing: isEditing
+                };
+                
+
+                
+                // Enviar al backend
+                $.post('/assign_personal_to_faena/', assignmentData)
+                    .done(function(response) {
+                        if (response.success) {
+                            const message = isEditing ? 'Asignación actualizada correctamente' : 'Personal asignado correctamente';
+                            alert(message);
+                            closeModal();
+                            refresh(); // Recargar el calendario
+                        } else {
+                            alert('Error: ' + (response.error || 'Error desconocido'));
+                        }
+                    })
+                    .fail(function() {
+                        alert('Error al ' + (isEditing ? 'actualizar' : 'asignar') + ' personal');
+                    });
+            });
+
+            // Remover asignación
+            $removeAssignment.on('click', function() {
+                if (!currentPerson || !currentPerson.faenas_detalladas || currentPerson.faenas_detalladas.length === 0) {
+                    alert('No hay faenas asignadas para remover');
+                    return;
+                }
+                
+                // Si tiene múltiples faenas, mostrar selector en el modal
+                if (currentPerson.faenas_detalladas.length > 1) {
+                    // Crear opciones para el select
+                    let faenaOptions = '<option value="">-- Seleccionar Faena a Remover --</option>';
+                    currentPerson.faenas_detalladas.forEach((faena, index) => {
+                        faenaOptions += `<option value="${faena.faena_id}">${faena.nombre} (${faena.turno})</option>`;
+                    });
+                    
+                    // Actualizar el select de faenas para remover
+                    $('#faenaToRemove').html(faenaOptions);
+                    $('#faenaRemoveSelector').show();
+                    $('#removeAssignment').hide();
+                    $('#confirmRemoveAssignment').show();
+                } else {
+                    // Solo una faena, confirmar directamente
+                    const faena = currentPerson.faenas_detalladas[0];
+                    if (confirm(`¿Está seguro de que desea remover a ${currentPerson.nombre} de la faena ${faena.nombre}?`)) {
+                        removeSpecificFaena(currentPerson.id, faena.faena_id);
+                    }
+                }
+            });
+
+            // Función para remover una faena específica
+            function removeSpecificFaena(personalId, faenaId) {
+                const removeData = {
+                    personal_id: personalId,
+                    faena_id: faenaId
+                };
+                
+                $.post('/remove_personal_from_faena/', removeData)
+                    .done(function(response) {
+                        if (response.success) {
+                            alert('Personal removido correctamente de la faena');
+                            closeModal();
+                            refresh(); // Recargar el calendario
+                        } else {
+                            alert('Error: ' + (response.error || 'Error desconocido'));
+                        }
+                    })
+                    .fail(function() {
+                        alert('Error al remover personal de la faena');
+                    });
+            }
+
+            // Event listener para confirmar remoción de faena específica
+            $(document).on('click', '#confirmRemoveAssignment', function() {
+                const faenaId = $('#faenaToRemove').val();
+                
+                if (!faenaId) {
+                    alert('Por favor seleccione una faena para remover');
+                    return;
+                }
+                
+                // Obtener el nombre de la faena seleccionada
+                const faenaSeleccionada = currentPerson.faenas_detalladas.find(f => f.faena_id == faenaId);
+                
+                if (confirm(`¿Está seguro de que desea remover a ${currentPerson.nombre} de la faena ${faenaSeleccionada.nombre}?`)) {
+                    removeSpecificFaena(currentPerson.id, faenaId);
+                }
+            });
+
+            // Inicializar
+            loadFilters();
+            loadTurnos();
+
+            // ===== INICIALIZACIÓN DEL PANEL DE LOGS =====
+            
+            // Event listeners para el panel de logs
+            $('#openLogsBtn').on('click', function() {
+                toggleLogsPanel();
+            });
+
+            $('#toggleLogsPanel').on('click', function() {
+                toggleLogsPanel();
+            });
+
+            $('#refreshLogs').on('click', function() {
+                loadLogs();
+            });
+
+            $('#logsSearch').on('input', function() {
+                filterLogs();
+            });
+
+            $('#logsActionFilter').on('change', function() {
+                filterLogs();
+            });
+
+            // ===== FUNCIONES DEL PANEL DE LOGS =====
+            
+            // Estado del panel de logs
+            let logsPanelOpen = false;
+            let logsRefreshInterval = null;
+
+            // Función para abrir/cerrar el panel de logs
+            function toggleLogsPanel() {
+                const panel = $('#logsPanel');
+                const btn = $('#openLogsBtn');
+                
+                if (logsPanelOpen) {
+                    panel.removeClass('open');
+                    btn.html('📋');
+                    btn.attr('title', 'Ver Logs de Auditoría');
+                    logsPanelOpen = false;
+                    
+                    // Detener actualización automática
+                    if (logsRefreshInterval) {
+                        clearInterval(logsRefreshInterval);
+                        logsRefreshInterval = null;
+                    }
+                } else {
+                    panel.addClass('open');
+                    btn.html('✕');
+                    btn.attr('title', 'Cerrar Panel de Logs');
+                    logsPanelOpen = true;
+                    
+                    // Cargar logs y empezar actualización automática
+                    loadLogs();
+                    startLogsAutoRefresh();
+                }
+            }
+
+            // Función para cargar logs
+            function loadLogs() {
+                const searchTerm = $('#logsSearch').val();
+                const actionFilter = $('#logsActionFilter').val();
+                
+                // Construir URL con filtros
+                let url = '/get_audit_logs/?limit=50';
+                if (actionFilter) {
+                    url += `&accion=${encodeURIComponent(actionFilter)}`;
+                }
+                if (searchTerm) {
+                    url += `&usuario=${encodeURIComponent(searchTerm)}`;
+                }
+                
+                $.get(url)
+                    .done(function(data) {
+                        if (data.success) {
+                            displayLogs(data.logs);
+                            updateLogsCount(data.logs.length);
+                        } else {
+                            console.error('Error al cargar logs:', data.error);
+                            displayLogs([]);
+                        }
+                    })
+                    .fail(function(error) {
+                        console.error('Error al cargar logs:', error);
+                        displayLogs([]);
+                    });
+            }
+
+            // Función para mostrar logs en la interfaz
+            function displayLogs(logs) {
+                const $logsList = $('#logsList');
+                
+                if (logs.length === 0) {
+                    $logsList.html('<div class="log-item"><div class="log-description">No hay logs para mostrar</div></div>');
+                    return;
+                }
+                
+                const logsHtml = logs.map(log => `
+                    <div class="log-item" data-log-id="${log.id}" onclick="showLogDetails(${log.id})">
+                        <div class="log-header">
+                            <span class="log-action">${log.accion}</span>
+                            <span class="log-time">${log.fecha_hora}</span>
+                        </div>
+                        <div class="log-user">👤 ${log.usuario}</div>
+                        <div class="log-description">${log.descripcion}</div>
+                        <div class="log-details">
+                            👷 ${log.cargo}
+                        </div>
+                    </div>
+                `).join('');
+                
+                $logsList.html(logsHtml);
+            }
+
+            // Función para actualizar contador de logs
+            function updateLogsCount(count) {
+                $('#logsCount').text(`${count} logs`);
+            }
+
+            // Función para iniciar actualización automática
+            function startLogsAutoRefresh() {
+                // Actualizar cada 30 segundos
+                logsRefreshInterval = setInterval(() => {
+                    if (logsPanelOpen) {
+                        loadLogs();
+                    }
+                }, 30000);
+            }
+
+            // Función para filtrar logs
+            function filterLogs() {
+                loadLogs();
+            }
+
+            // Función para mostrar detalles del log
+            window.showLogDetails = function(logId) {
+                // Buscar el log en la lista actual
+                const log = currentLogs.find(l => l.id === logId);
+                if (!log) {
+                    console.error('Log no encontrado:', logId);
+                    return;
+                }
+
+                // Llenar el modal con la información del log
+                $('#logDetailUsuario').text(log.usuario || 'N/A');
+                $('#logDetailAccion').text(log.accion || 'N/A');
+                $('#logDetailCargo').text(log.cargo || 'N/A');
+                $('#logDetailFecha').text(log.fecha_hora || 'N/A');
+                $('#logDetailDescripcion').text(log.descripcion || 'N/A');
+
+                // Mostrar el modal
+                $('#logDetailModal').show();
+
+            };
+
+            // Variable global para almacenar los logs actuales
+            let currentLogs = [];
+
+            // Modificar la función loadLogs para almacenar los logs
+            function loadLogs() {
+                const searchTerm = $('#logsSearch').val();
+                const actionFilter = $('#logsActionFilter').val();
+                
+                let url = '/get_audit_logs/?limit=50';
+                if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
+                if (actionFilter) url += `&accion=${encodeURIComponent(actionFilter)}`;
+                
+                $.get(url)
+                    .done(function(response) {
+                        if (response.success) {
+                            currentLogs = response.logs; // Almacenar logs en variable global
+                            displayLogs(response.logs);
+                            updateLogsCount(response.logs.length);
+                        } else {
+                            console.error('Error al cargar logs:', response.error);
+                            $('#logsList').html('<div class="log-item"><div class="log-description">Error al cargar logs</div></div>');
+                        }
+                    })
+                    .fail(function(xhr, status, error) {
+                        console.error('Error en la petición:', error);
+                        $('#logsList').html('<div class="log-item"><div class="log-description">Error al cargar logs</div></div>');
+                    });
+            }
+
+            // Eventos para el modal de detalles del log
+            $(document).ready(function() {
+                // Cerrar modal con el botón X
+                $('#closeLogModal').click(function() {
+                    $('#logDetailModal').hide();
+                });
+
+                // Cerrar modal con el botón Cerrar
+                $('#closeLogDetailBtn').click(function() {
+                    $('#logDetailModal').hide();
+                });
+
+                // Cerrar modal haciendo clic fuera de él
+                $(window).click(function(event) {
+                    if (event.target === document.getElementById('logDetailModal')) {
+                        $('#logDetailModal').hide();
+                    }
+                });
+
+                // Event delegation para logs (respaldo)
+                $(document).on('click', '.log-item', function() {
+                    const logId = $(this).data('log-id');
+                    if (logId) {
+                        showLogDetails(logId);
+                    }
+                });
+
+
+            });
+        });
+    </script>
+
+    <!-- Modal para gestionar personal -->
+    <div id="personModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Gestionar Personal</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="person-info-display">
+                    <h4 id="modalPersonName"></h4>
+                    <p><strong>RUT:</strong> <span id="modalPersonRut"></span></p>
+                    <p><strong>Cargo:</strong> <span id="modalPersonCargo"></span></p>
+                </div>
+                
+                <div class="faena-assignment">
+                    <h4 id="formTitle">Asignación de Faena</h4>
+                    
+                    <div class="form-group">
+                        <label for="faenaSelect">Faena:</label>
+                        <select id="faenaSelect" class="form-control">
+                            <option value="">-- Seleccionar Faena --</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Información del turno de la faena -->
+                    <div id="faenaTurnoInfo" class="faena-turno-info" style="display: none;">
+                        <div class="turno-info">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Turno de la faena: <strong id="faenaTurnoActual">No especificado</strong></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Información de fechas de la faena -->
+                    <div id="faenaFechasInfo" class="faena-fechas-info" style="display: none;">
+                        <div class="fechas-info">
+                            <div class="fecha-item fecha-inicio">
+                                <i class="fas fa-play-circle"></i>
+                                <span>Inicia: <strong id="faenaFechaInicio">No especificada</strong></span>
+                            </div>
+                            <div class="fecha-item fecha-fin">
+                                <i class="fas fa-stop-circle"></i>
+                                <span>Finaliza: <strong id="faenaFechaFin">No especificada</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="turnoSelect">Turno Personalizado:</label>
+                        <select id="turnoSelect" class="form-control">
+                            <option value="">-- Usar turno de la faena --</option>
+                        </select>
+                        <small class="help-text">Si no selecciona un turno, se usará el de la faena</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="fechaInicio" class="required">Fecha de Inicio:</label>
+                        <input type="date" id="fechaInicio" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="current-assignment" id="currentAssignment" style="display: none;">
+                    <h4>Asignación Actual</h4>
+                    <div id="currentAssignmentInfo"></div>
+                    
+                    <!-- Selector de faena para remover (solo visible cuando hay múltiples faenas) -->
+                    <div id="faenaRemoveSelector" style="display: none; margin: 15px 0;">
+                        <label for="faenaToRemove"><strong>Seleccionar Faena a Remover:</strong></label>
+                        <select id="faenaToRemove" style="width: 100%; margin: 8px 0; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                            <option value="">-- Seleccionar Faena --</option>
+                        </select>
+                        <button type="button" id="confirmRemoveAssignment" class="btn btn-danger" style="display: none;">Confirmar Remoción</button>
+                    </div>
+                    
+                    <button type="button" id="removeAssignment" class="btn btn-danger">Remover de la Faena</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="saveAssignment" class="btn btn-primary">Guardar Asignación</button>
+                <button type="button" class="btn btn-secondary" id="cancelAssignment">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para detalles del log -->
+    <div id="logDetailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="logModalTitle">Detalles del Log</h3>
+                <span class="close" id="closeLogModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="log-detail-info">
+                    <div class="log-detail-row">
+                        <strong>Usuario:</strong> <span id="logDetailUsuario"></span>
+                    </div>
+                    <div class="log-detail-row">
+                        <strong>Acción:</strong> <span id="logDetailAccion"></span>
+                    </div>
+                    <div class="log-detail-row">
+                        <strong>Cargo:</strong> <span id="logDetailCargo"></span>
+                    </div>
+                    <div class="log-detail-row">
+                        <strong>Fecha y Hora:</strong> <span id="logDetailFecha"></span>
+                    </div>
+                    <div class="log-detail-row">
+                        <strong>Descripción:</strong> <span id="logDetailDescripcion"></span>
+                    </div>
+
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="closeLogDetailBtn">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+
