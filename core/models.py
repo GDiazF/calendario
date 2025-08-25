@@ -320,6 +320,7 @@ class PersonalFaena(models.Model):
     def clean(self):
         """Validar fechas de asignación"""
         from django.core.exceptions import ValidationError
+        from datetime import date, timedelta
         
         # Verificar que la fecha de inicio esté dentro del rango de la faena
         if self.faena and self.fecha_inicio:
@@ -327,6 +328,19 @@ class PersonalFaena(models.Model):
                 raise ValidationError(f'La fecha de inicio no puede ser anterior al inicio de la faena ({self.faena.fecha_inicio})')
             if self.faena.fecha_fin and self.fecha_inicio > self.faena.fecha_fin:
                 raise ValidationError(f'La fecha de inicio no puede ser posterior al fin de la faena ({self.faena.fecha_fin})')
+        
+        # Validar que los turnos no sobrepasen las fechas de la faena
+        if self.faena and self.fecha_inicio and self.turno_efectivo:
+            # Calcular la fecha fin de la asignación basada en el turno
+            fecha_fin_asignacion = self.fecha_fin_calculada
+            
+            if fecha_fin_asignacion and self.faena.fecha_fin:
+                if fecha_fin_asignacion > self.faena.fecha_fin:
+                    raise ValidationError(
+                        f'Los turnos asignados se extienden más allá de la fecha de fin de la faena. '
+                        f'La asignación terminaría el {fecha_fin_asignacion} pero la faena termina el {self.faena.fecha_fin}. '
+                        f'Considere ajustar la fecha de inicio o el turno.'
+                    )
     
     @property
     def turno_efectivo(self):

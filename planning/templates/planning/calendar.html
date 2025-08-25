@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planificación de Personal</title>
+    <title>Calendario de Planificación</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -141,7 +141,7 @@
             gap: 20px;
             align-items: center;
             flex-wrap: wrap;
-            padding: 20px 30px;
+            padding: 8px 30px;
             background: #ffffff;
             border: 1px solid #e9ecef;
             border-radius: 8px;
@@ -153,7 +153,7 @@
         .filter-group {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 2px;
             min-width: 180px;
             align-items: center;
         }
@@ -167,7 +167,7 @@
         }
         
         select, button, .search-input {
-            padding: 8px 12px;
+            padding: 4px 8px;
             border: 1px solid #ced4da;
             border-radius: 6px;
             font-size: 14px;
@@ -332,6 +332,7 @@
             min-width: max-content;
             box-sizing: border-box;
             grid-auto-flow: row;
+            gap: 0;
             /* Asegurar que el grid no interfiera con sticky */
             position: relative;
         }
@@ -340,7 +341,7 @@
             padding: 8px 4px;
             background: #f8f9fa;
             border-right: 1px solid #e9ecef;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: none;
             text-align: center;
             font-weight: 500;
             font-size: 11px;
@@ -349,12 +350,19 @@
             white-space: nowrap;
         }
 
+        .header-cell:last-child {
+            border-right: none;
+        }
+
         .header-cell:first-child {
-            min-width: 300px;
-            width: 300px;
-            padding: 8px 16px;
+            min-width: 250px;
+            width: 250px;
+            padding: 6px 12px;
             text-align: left;
             font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            border-right: none;
             position: sticky;
             left: 0;
             z-index: 20;
@@ -369,12 +377,12 @@
         }
 
         .person-info-cell {
-            padding: 8px 16px;
-            border-right: 1px solid #e9ecef;
+            padding: 6px 12px;
+            border-right: none;
             border-bottom: 1px solid #e9ecef;
             background: white;
-            min-width: 300px;
-            width: 300px;
+            min-width: 250px;
+            width: 250px;
             position: sticky;
             left: 0;
             z-index: 10;
@@ -402,6 +410,9 @@
             right: 16px;
             opacity: 0;
             transition: opacity 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .person-info-cell.clickable:hover .person-actions {
@@ -411,11 +422,19 @@
         .edit-icon {
             font-size: 14px;
             color: #007bff;
+            cursor: pointer;
+        }
+        
+        .info-icon {
+            font-size: 14px;
+            color: #28a745;
+            cursor: pointer;
         }
         
         .person-name {
             font-weight: 500;
             margin-bottom: 4px;
+            font-size: 13px;
         }
         
         .person-rut {
@@ -425,7 +444,7 @@
         }
         
         .person-faena {
-            font-size: 12px;
+            font-size: 11px;
             color: #007bff;
             font-weight: 500;
         }
@@ -433,6 +452,18 @@
         .person-faena.no-faena {
             color: #6c757d;
             font-style: italic;
+        }
+
+        .person-cargo {
+            font-size: 11px;
+            color: #ff8c00;
+            margin-top: 2px;
+        }
+
+        /* Clase para texto pequeño en general */
+        .small-text {
+            font-size: 11px !important;
+            line-height: 1.2;
         }
 
         /* Estilos para múltiples faenas */
@@ -452,12 +483,6 @@
             font-size: 10px;
             white-space: nowrap;
             z-index: 100;
-        }
-
-        .person-cargo {
-            font-size: 12px;
-            color: #ff8c00;
-            font-weight: 500;
         }
 
         /* Scrollbar personalizado para el calendario */
@@ -574,14 +599,14 @@
         }
 
         .day-cell {
-            padding: 2px;
+            padding: 0;
             border-right: 1px solid #e9ecef;
             border-bottom: 1px solid #e9ecef;
             background: white;
             min-width: 60px;
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 0;
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -596,32 +621,32 @@
             font-size: 9px;
             color: #6c757d;
             text-align: center;
-            margin-top: 1px;
+            margin-top: 0;
         }
         
         .status-badge {
-            padding: 2px 4px;
-            border-radius: 3px;
-            font-size: 10px;
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-size: 9px;
             font-weight: 500;
             text-align: center;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            min-height: 16px;
-            min-width: 40px;
-            line-height: 1.2;
+            min-height: 14px;
+            min-width: 35px;
+            line-height: 1.1;
             display: inline-flex;
             align-items: center;
             justify-content: center;
         }
 
         .status-secondary {
-            font-size: 10px;
-            padding: 2px 4px;
+            font-size: 9px;
+            padding: 1px 3px;
             opacity: 1;
-            min-height: 16px;
-            line-height: 1.2;
+            min-height: 14px;
+            line-height: 1.1;
         }
 
         /* Estados clickeables */
@@ -768,7 +793,7 @@
         @media (max-width: 1400px) {
             .filters {
                 gap: 15px;
-                padding: 18px 25px;
+                padding: 6px 25px;
             }
             
             .filter-group {
@@ -802,7 +827,7 @@
         @media (max-width: 1200px) {
             .filters {
                 gap: 12px;
-                padding: 15px 20px;
+                padding: 5px 20px;
             }
             
             .filter-group {
@@ -836,7 +861,7 @@
         @media (max-width: 992px) {
             .filters {
                 gap: 10px;
-                padding: 12px 15px;
+                padding: 5px 15px;
                 flex-wrap: wrap;
                 justify-content: center;
             }
@@ -1120,26 +1145,52 @@
         }
 
         .logs-filters {
-            padding: 15px;
+            padding: 20px;
             border-bottom: 1px solid #e9ecef;
             background: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
         }
 
         .logs-search {
             width: 100%;
-            padding: 8px 12px;
+            max-width: 400px;
+            padding: 10px 15px;
             border: 1px solid #ced4da;
-            border-radius: 4px;
-            margin-bottom: 10px;
+            border-radius: 6px;
             font-size: 14px;
+            transition: border-color 0.2s ease;
+            text-align: center;
+        }
+
+        .logs-search:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
         }
 
         .logs-filter-select {
             width: 100%;
-            padding: 8px 12px;
+            max-width: 400px;
+            padding: 10px 15px;
             border: 1px solid #ced4da;
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 14px;
+            transition: border-color 0.2s ease;
+            text-align: center;
+        }
+
+        .logs-filter-select:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        /* Hacer que el primer filtro (búsqueda) ocupe todo el ancho */
+        .logs-filters .logs-search:nth-child(1) {
+            grid-column: 1 / -1;
         }
 
         .logs-list {
@@ -1418,11 +1469,13 @@
         .header-cell.current-day .day-number {
             font-weight: 700;
             font-size: 16px;
+            color: white;
         }
 
         .header-cell.current-day .day-name {
             font-weight: 600;
             opacity: 0.9;
+            color: white;
         }
 
         /* Línea temporal desde el día actual hacia abajo */
@@ -1579,6 +1632,35 @@
         .person-info-display p {
             margin: 5px 0;
             color: #495057;
+        }
+        
+        .person-info-grid {
+            display: grid;
+            gap: 12px;
+            margin-top: 15px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .info-row strong {
+            color: #495057;
+            font-weight: 600;
+            min-width: 120px;
+        }
+        
+        .info-row span {
+            color: #6c757d;
+            font-weight: 500;
+            text-align: right;
+            flex: 1;
         }
 
         .faena-assignment h4 {
@@ -1750,6 +1832,40 @@
         .log-item:active {
             transform: translateY(0);
         }
+
+        .person-row:nth-child(even) .person-info-cell {
+            background-color: #f8f9fa;
+        }
+
+        .person-row:nth-child(even) .day-cell {
+            background-color: #f8f9fa;
+        }
+
+        .person-row:nth-child(odd) .person-info-cell {
+            background-color: white;
+        }
+
+        .person-row:nth-child(odd) .day-cell {
+            background-color: white;
+        }
+
+        /* Hover effect para mejor distinción */
+        .person-row:hover .person-info-cell {
+            background-color: #e3f2fd !important;
+        }
+
+        .person-row:hover .day-cell {
+            background-color: #e3f2fd !important;
+        }
+
+        /* Borde sutil entre filas para mayor claridad */
+        .person-row:not(:last-child) .person-info-cell {
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .person-row:not(:last-child) .day-cell {
+            border-bottom: 1px solid #e9ecef;
+        }
     </style>
 </head>
 <body>
@@ -1910,13 +2026,16 @@
         </div>
         <div class="logs-panel-content">
             <div class="logs-filters">
-                <input type="text" id="logsSearch" placeholder="🔍 Buscar en logs..." class="logs-search">
+                <input type="text" id="logsSearch" placeholder="🔍 Buscar por personal o RUT..." class="logs-search">
                 <select id="logsActionFilter" class="logs-filter-select">
                     <option value="">Todas las acciones</option>
                     <option value="asignar">Asignar</option>
                     <option value="remover">Remover</option>
                     <option value="editar">Editar</option>
                     <option value="crear">Crear</option>
+                </select>
+                <select id="logsFaenaFilter" class="logs-filter-select">
+                    <option value="">Todas las faenas</option>
                 </select>
             </div>
             <div class="logs-list" id="logsList">
@@ -1956,6 +2075,8 @@
                 days: getDaysInMonth(new Date().getFullYear(), new Date().getMonth() + 1),
                 personas: [],
                 todasLasPersonas: [], // Almacenar todas las personas para filtrado local
+                faenas: [], // Array para almacenar faenas para validaciones
+                turnos: [], // Array para almacenar turnos para validaciones
                 filtros: {
                     faena: '',
                     cargos: [],
@@ -1994,6 +2115,8 @@
                     .done(function(response) {
                         // Almacenar datos de faenas globalmente para usar en otras funciones
                         window.faenasData = response.results;
+                        // También almacenar en state para validaciones
+                        state.faenas = response.results;
                         
                         $faena.empty().append('<option value="">Todas las faenas</option>');
                         response.results.forEach(faena => {
@@ -2044,15 +2167,29 @@
                         console.error('Error al cargar cargos');
                     });
             }
-
-
+            
+            // Cargar filtros de logs de auditoría
+            function loadLogsFilters() {
+                // Cargar faenas para el filtro de logs (solo faenas reales, sin "SIN ASIGNAR")
+                $.get('/get_faenas_for_audit/')
+                    .done(function(response) {
+                        const $faenaFilter = $('#logsFaenaFilter');
+                        $faenaFilter.empty().append('<option value="">Todas las faenas</option>');
+                        response.results.forEach(faena => {
+                            $faenaFilter.append(`<option value="${faena.id}">${faena.nombre}</option>`);
+                        });
+                    })
+                    .fail(function() {
+                        console.error('Error al cargar faenas para filtros de logs');
+                    });
+            }
             
             // Renderizar calendario completo
             function renderCalendar(estados) {
                 $calendarGrid.empty();
                 
                 // Establecer dinámicamente el grid basado en el número de días
-                const gridTemplate = `300px repeat(${state.days}, minmax(40px, 1fr))`;
+                const gridTemplate = `250px repeat(${state.days}, minmax(40px, 1fr))`;
                 $calendarGrid.css('grid-template-columns', gridTemplate);
                 
                 // Renderizar header
@@ -2131,12 +2268,12 @@
                         
                         personRow.append(`
                             <div class="person-info-cell clickable" data-person-id="${person.id}" data-person-name="${person.nombre}" data-person-faena="${person.faena_actual || ''}">
-                                <div class="person-name">${person.nombre}</div>
-                                <div class="person-rut">${person.rut}</div>
-                                <div class="person-faena ${person.faenas_detalladas && person.faenas_detalladas.length > 0 ? '' : 'no-faena'}">${faenaInfo}</div>
-                                ${person.cargo_actual ? `<div class="person-cargo">${person.cargo_actual}</div>` : ''}
+                                <div class="person-name small-text">${person.nombre}</div>
+                                <div class="person-faena small-text ${person.faenas_detalladas && person.faenas_detalladas.length > 0 ? '' : 'no-faena'}">${faenaInfo}</div>
+                                ${person.cargo_actual ? `<div class="person-cargo small-text">${person.cargo_actual}</div>` : ''}
                                 <div class="person-actions">
-                                    <span class="edit-icon">✏️</span>
+                                    <span class="edit-icon" title="Editar asignación">✏️</span>
+                                    <span class="info-icon" title="Ver información">🔍</span>
                                 </div>
                             </div>
                         `);
@@ -2547,6 +2684,9 @@
             function loadTurnos() {
                 $.get('/get_turnos/')
                     .done(function(response) {
+                        // Almacenar turnos en state para validaciones
+                        state.turnos = response.results || [];
+                        
                         $turnoSelect.empty().append('<option value="">-- Usar turno de la faena --</option>');
                         
                         if (response.results && response.results.length > 0) {
@@ -2567,6 +2707,16 @@
                     .fail(function(xhr, status, error) {
                         // Error silencioso al cargar turnos
                     });
+            }
+
+            // Función para actualizar restricciones de fecha en el input
+            function updateDateConstraints(faenaId) {
+                const faena = state.faenas.find(f => f.id == faenaId);
+                if (faena && faena.fecha_inicio && faena.fecha_fin) {
+                    $('#fechaInicio').prop('min', faena.fecha_inicio).prop('max', faena.fecha_fin);
+                } else {
+                    $('#fechaInicio').prop('min', '').prop('max', '');
+                }
             }
 
             // Mostrar turno y fechas de la faena seleccionada
@@ -2593,6 +2743,25 @@
                             $('#faenaFechaInicio').text(fechaInicio);
                             $('#faenaFechaFin').text(fechaFin);
                             $('#faenaFechasInfo').show();
+                            
+                            // Actualizar el estado con las fechas de la faena para validación
+                            if (state.faenas) {
+                                const faena = state.faenas.find(f => f.id == faenaId);
+                                if (faena) {
+                                    // Convertir fechas del formato dd/mm/yyyy a yyyy-mm-dd para el estado
+                                    if (response.fecha_inicio && response.fecha_inicio !== 'No especificada') {
+                                        const [day, month, year] = response.fecha_inicio.split('/');
+                                        faena.fecha_inicio = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                                    }
+                                    if (response.fecha_fin && response.fecha_fin !== 'No especificada') {
+                                        const [day, month, year] = response.fecha_fin.split('/');
+                                        faena.fecha_fin = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                                    }
+                                    
+                                    // Actualizar restricciones de fecha en el input
+                                    updateDateConstraints(faenaId);
+                                }
+                            }
                         } else {
                             $('#faenaTurnoActual').text('No especificado');
                             $('#faenaTurnoInfo').show();
@@ -2617,6 +2786,17 @@
                 
                 if (currentPerson) {
                     openModal(currentPerson);
+                }
+            });
+            
+            // Abrir modal de información al hacer clic en el ícono de información
+            $(document).on('click', '.info-icon', function(e) {
+                e.stopPropagation(); // Evitar que se abra el modal de edición
+                const personId = $(this).closest('.person-info-cell').data('person-id');
+                const person = state.personas.find(p => p.id == personId);
+                
+                if (person) {
+                    openPersonInfoModal(person);
                 }
             });
 
@@ -2664,10 +2844,15 @@
                         } else {
                             $turnoSelect.prop('disabled', false);
                         }
+                        
+                        // Actualizar restricciones de fecha en el input de fecha
+                        updateDateConstraints(faenaId);
                     } else {
                         $('#faenaTurnoInfo').hide();
                         $('#faenaFechasInfo').hide();
                         $turnoSelect.prop('disabled', false);
+                        // Limpiar restricciones de fecha
+                        $('#fechaInicio').prop('min', '').prop('max', '');
                     }
                 });
                 
@@ -2761,6 +2946,21 @@
                 $modal.show();
             }
 
+            // Abrir modal de información del personal
+            function openPersonInfoModal(person) {
+                // Llenar información del personal
+                $('#personInfoName').text(person.nombre);
+                $('#personInfoRut').text(person.rut);
+                $('#personInfoEmail').text(person.correo || 'No especificado');
+                $('#personInfoDireccion').text(person.direccion || 'No especificada');
+                $('#personInfoComuna').text(person.comuna_nombre || 'No especificada');
+                $('#personInfoFechaNac').text(person.fechanac ? new Date(person.fechanac).toLocaleDateString('es-ES') : 'No especificada');
+                $('#personInfoCargo').text(person.cargo_actual || 'Sin cargo');
+                
+                // Mostrar modal
+                $('#personInfoModal').show();
+            }
+            
             // Abrir modal de estado
             function openEstadoModal(tipo, texto, detalles) {
                 let titulo = '';
@@ -2903,6 +3103,18 @@
                     $estadoModal.hide();
                 }
             });
+            
+            // Event listeners del modal de información del personal
+            $('#closePersonInfoModal, #closePersonInfoBtn').on('click', function() {
+                $('#personInfoModal').hide();
+            });
+            
+            // Cerrar modal de información del personal al hacer clic fuera
+            $(window).on('click', function(e) {
+                if (e.target === document.getElementById('personInfoModal')) {
+                    $('#personInfoModal').hide();
+                }
+            });
 
             // Guardar asignación
             $saveAssignment.on('click', function() {
@@ -2920,6 +3132,53 @@
                 if (faenaId === 'sin_asignar') {
                     alert('No se puede asignar "SIN ASIGNAR" como una faena. Por favor seleccione una faena válida.');
                     return;
+                }
+                
+                // Validación de fechas antes de enviar al backend
+                const fechaInicioObj = new Date(fechaInicio);
+                if (isNaN(fechaInicioObj.getTime())) {
+                    alert('Por favor ingrese una fecha válida');
+                    return;
+                }
+                
+                // Obtener información de la faena seleccionada para validación
+                const faenaSeleccionada = state.faenas.find(f => f.id == faenaId);
+                if (faenaSeleccionada && faenaSeleccionada.fecha_inicio && faenaSeleccionada.fecha_fin) {
+                    const faenaInicio = new Date(faenaSeleccionada.fecha_inicio);
+                    const faenaFin = new Date(faenaSeleccionada.fecha_fin);
+                    
+                    // Validar que la fecha de inicio esté dentro del rango de la faena
+                    if (fechaInicioObj < faenaInicio) {
+                        alert(`La fecha de inicio (${fechaInicioObj.toLocaleDateString('es-ES')}) no puede ser anterior al inicio de la faena (${faenaInicio.toLocaleDateString('es-ES')})`);
+                        return;
+                    }
+                    
+                    if (fechaInicioObj > faenaFin) {
+                        alert(`La fecha de inicio (${fechaInicioObj.toLocaleDateString('es-ES')}) no puede ser posterior al fin de la faena (${faenaFin.toLocaleDateString('es-ES')})`);
+                        return;
+                    }
+                    
+                    // Si hay turno seleccionado, validar que los turnos no sobrepasen la fecha fin
+                    if (turnoId) {
+                        const turnoSeleccionado = state.turnos.find(t => t.id == turnoId);
+                        if (turnoSeleccionado) {
+                            // Calcular días disponibles desde la fecha de inicio hasta el fin de la faena
+                            const diasDisponibles = Math.floor((faenaFin - fechaInicioObj) / (1000 * 60 * 60 * 24)) + 1;
+                            const ciclosCompletos = Math.floor(diasDisponibles / turnoSeleccionado.duracion_ciclo);
+                            const diasTrabajoTotal = ciclosCompletos * turnoSeleccionado.dias_trabajo;
+                            
+                            // Calcular fecha fin de la asignación
+                            const fechaFinAsignacion = new Date(fechaInicioObj);
+                            fechaFinAsignacion.setDate(fechaFinAsignacion.getDate() + diasTrabajoTotal - 1);
+                            
+                            if (fechaFinAsignacion > faenaFin) {
+                                alert(`Los turnos asignados se extienden más allá de la fecha de fin de la faena. ` +
+                                      `La asignación terminaría el ${fechaFinAsignacion.toLocaleDateString('es-ES')} pero la faena termina el ${faenaFin.toLocaleDateString('es-ES')}. ` +
+                                      `Considere ajustar la fecha de inicio o el turno.`);
+                                return;
+                            }
+                        }
+                    }
                 }
                 
                 // Determinar si es una edición o nueva asignación
@@ -3025,6 +3284,7 @@
             // Inicializar
             loadFilters();
             loadTurnos();
+            loadLogsFilters();
 
             // ===== INICIALIZACIÓN DEL PANEL DE LOGS =====
             
@@ -3087,6 +3347,13 @@
             function loadLogs() {
                 const searchTerm = $('#logsSearch').val();
                 const actionFilter = $('#logsActionFilter').val();
+                const faenaFilter = $('#logsFaenaFilter').val();
+                
+                console.log('DEBUG: Filtros aplicados:', {
+                    searchTerm,
+                    actionFilter,
+                    faenaFilter
+                });
                 
                 // Construir URL con filtros
                 let url = '/get_audit_logs/?limit=50';
@@ -3094,22 +3361,32 @@
                     url += `&accion=${encodeURIComponent(actionFilter)}`;
                 }
                 if (searchTerm) {
-                    url += `&usuario=${encodeURIComponent(searchTerm)}`;
+                    // Solo enviar el término de búsqueda para personal, no para usuario
+                    url += `&personal=${encodeURIComponent(searchTerm)}`;
                 }
+                if (faenaFilter) {
+                    url += `&faena=${encodeURIComponent(faenaFilter)}`;
+                }
+                
+                console.log('DEBUG: URL de búsqueda:', url);
                 
                 $.get(url)
                     .done(function(data) {
+                        console.log('DEBUG: Respuesta del servidor:', data);
                         if (data.success) {
+                            currentLogs = data.logs; // Almacenar logs en variable global
                             displayLogs(data.logs);
                             updateLogsCount(data.logs.length);
                         } else {
                             console.error('Error al cargar logs:', data.error);
                             displayLogs([]);
+                            updateLogsCount(0);
                         }
                     })
                     .fail(function(error) {
                         console.error('Error al cargar logs:', error);
                         displayLogs([]);
+                        updateLogsCount(0);
                     });
             }
 
@@ -3132,6 +3409,8 @@
                         <div class="log-description">${log.descripcion}</div>
                         <div class="log-details">
                             👷 ${log.cargo}
+                            ${log.personal && log.personal !== 'N/A' ? `<br>👤 ${log.personal}` : ''}
+                            ${log.faena && log.faena !== 'N/A' ? `<br>🏗️ ${log.faena}` : ''}
                         </div>
                     </div>
                 `).join('');
@@ -3183,31 +3462,7 @@
             // Variable global para almacenar los logs actuales
             let currentLogs = [];
 
-            // Modificar la función loadLogs para almacenar los logs
-            function loadLogs() {
-                const searchTerm = $('#logsSearch').val();
-                const actionFilter = $('#logsActionFilter').val();
-                
-                let url = '/get_audit_logs/?limit=50';
-                if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
-                if (actionFilter) url += `&accion=${encodeURIComponent(actionFilter)}`;
-                
-                $.get(url)
-                    .done(function(response) {
-                        if (response.success) {
-                            currentLogs = response.logs; // Almacenar logs en variable global
-                            displayLogs(response.logs);
-                            updateLogsCount(response.logs.length);
-                        } else {
-                            console.error('Error al cargar logs:', response.error);
-                            $('#logsList').html('<div class="log-item"><div class="log-description">Error al cargar logs</div></div>');
-                        }
-                    })
-                    .fail(function(xhr, status, error) {
-                        console.error('Error en la petición:', error);
-                        $('#logsList').html('<div class="log-item"><div class="log-description">Error al cargar logs</div></div>');
-                    });
-            }
+
 
             // Eventos para el modal de detalles del log
             $(document).ready(function() {
@@ -3236,6 +3491,19 @@
                     }
                 });
 
+                // Event listeners para los filtros de logs
+                $('#logsSearch, #logsActionFilter, #logsFaenaFilter').on('change keyup', function() {
+                    // Para inputs de texto, esperar un poco antes de filtrar (debounce)
+                    if (this.type === 'text') {
+                        clearTimeout(window.logsFilterTimeout);
+                        window.logsFilterTimeout = setTimeout(() => {
+                            loadLogs();
+                        }, 500);
+                    } else {
+                        // Para selects, filtrar inmediatamente
+                        loadLogs();
+                    }
+                });
 
             });
         });
@@ -3296,8 +3564,12 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="fechaInicio" class="required">Fecha de Inicio:</label>
+                        <label for="fechaInicio">Fecha de Inicio:</label>
                         <input type="date" id="fechaInicio" class="form-control" required>
+                        <small class="form-text text-muted">
+                            <strong>Restricciones de fecha:</strong> La fecha de inicio debe estar dentro del rango de la faena seleccionada. 
+                            Los turnos asignados no pueden extenderse más allá de la fecha de fin de la faena.
+                        </small>
                     </div>
                 </div>
 
@@ -3320,6 +3592,44 @@
             <div class="modal-footer">
                 <button type="button" id="saveAssignment" class="btn btn-primary">Guardar Asignación</button>
                 <button type="button" class="btn btn-secondary" id="cancelAssignment">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para información del personal -->
+    <div id="personInfoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="personInfoModalTitle">Información del Personal</h3>
+                <span class="close" id="closePersonInfoModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="person-info-display">
+                    <h4 id="personInfoName"></h4>
+                    <div class="person-info-grid">
+                        <div class="info-row">
+                            <strong>RUT:</strong> <span id="personInfoRut"></span>
+                        </div>
+                        <div class="info-row">
+                            <strong>Email:</strong> <span id="personInfoEmail"></span>
+                        </div>
+                        <div class="info-row">
+                            <strong>Dirección:</strong> <span id="personInfoDireccion"></span>
+                        </div>
+                        <div class="info-row">
+                            <strong>Comuna:</strong> <span id="personInfoComuna"></span>
+                        </div>
+                        <div class="info-row">
+                            <strong>Fecha de Nacimiento:</strong> <span id="personInfoFechaNac"></span>
+                        </div>
+                        <div class="info-row">
+                            <strong>Cargo:</strong> <span id="personInfoCargo"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="closePersonInfoBtn">Cerrar</button>
             </div>
         </div>
     </div>

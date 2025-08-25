@@ -1,13 +1,28 @@
+# =============================================================================
+# IMPORTS Y CONFIGURACIÓN
+# =============================================================================
+
+# Importaciones estándar de Python para manejo de fechas y calendarios
 from datetime import date
 from calendar import monthrange
+from datetime import timedelta
+
+# Importaciones de Django para manejo de HTTP, vistas y base de datos
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
 from django.db.models import Q
 from django.utils import timezone
+
+# Importación para manejo de idioma español en fechas
 import locale
 
-# Configurar locale para fechas en español
+# =============================================================================
+# CONFIGURACIÓN DE IDIOMA ESPAÑOL PARA FECHAS
+# =============================================================================
+
+# Intentar configurar el locale para fechas en español
+# Se prueban diferentes formatos según el sistema operativo
 try:
     locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
 except:
@@ -20,22 +35,34 @@ except:
             # Si no se puede configurar el locale, usar inglés por defecto
             pass
 
+# =============================================================================
+# IMPORTACIONES DE MODELOS DE LA BASE DE DATOS
+# =============================================================================
+
+# Importar todos los modelos necesarios para el calendario
 from core.models import (
-    Personal,
-    Cargo,
-    DeptoEmpresa,
-    Empresa,
-    Faena,
-    TipoTurno,
-    Ausentismo,
-    LicenciaMedicaPorPersonal,
-    PersonalFaena,
-    AuditLog,
+    Personal,           # Modelo principal de personal/empleados
+    Cargo,             # Modelo de cargos/puestos de trabajo
+    DeptoEmpresa,      # Modelo de departamentos de la empresa
+    Empresa,           # Modelo de empresas
+    Faena,             # Modelo de faenas/proyectos
+    TipoTurno,         # Modelo de tipos de turnos (7x7, 14x7, etc.)
+    Ausentismo,        # Modelo de ausentismos (vacaciones, permisos, etc.)
+    LicenciaMedicaPorPersonal,  # Modelo de licencias médicas
+    PersonalFaena,     # Modelo de asignación de personal a faenas
+    AuditLog,          # Modelo de logs de auditoría
 )
 
 
+# =============================================================================
+# FUNCIONES AUXILIARES
+# =============================================================================
+
 def get_client_ip(request):
-    """Obtener la IP del cliente desde el request"""
+    """
+    Obtener la IP del cliente desde el request
+    Útil para logs de auditoría y seguridad
+    """
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
         ip = x_forwarded_for.split(',')[0]
@@ -45,7 +72,10 @@ def get_client_ip(request):
 
 
 def get_current_user_name(request):
-    """Obtener el nombre del usuario actual autenticado"""
+    """
+    Obtener el nombre del usuario actual autenticado
+    Se usa para identificar quién realiza cambios en el sistema
+    """
     if request.user.is_authenticated:
         if request.user.first_name and request.user.last_name:
             return f"{request.user.first_name} {request.user.last_name}"
@@ -56,8 +86,15 @@ def get_current_user_name(request):
     return 'Usuario no autenticado'
 
 
+# =============================================================================
+# VISTA PRINCIPAL DEL CALENDARIO
+# =============================================================================
+
 def calendar_view(request):
-    """Vista principal del calendario de planificación"""
+    """
+    Vista principal del calendario de planificación
+    Renderiza la página HTML del calendario con el mes y año especificados
+    """
     today = date.today()
     month = int(request.GET.get('month', today.month))
     year = int(request.GET.get('year', today.year))
@@ -71,17 +108,45 @@ def calendar_view(request):
     return render(request, 'planning/calendar.html', context)
 
 
+# =============================================================================
+# API PARA OBTENER PERSONAL FILTRADO
+# =============================================================================
+
 @require_GET
 def get_personas(request):
-    """Obtener lista de personas filtradas por faena y cargos"""
-    # Intentar diferentes formas de obtener los cargos
+    """
+    Obtener lista de personas filtradas por faena y cargos
+    
+    Esta función es el corazón del sistema de filtrado del calendario:
+    - Filtra personal por cargos específicos (RIGGER, OPERADOR, etc.)
+    - Filtra por faenas asignadas o sin asignar
+    - Obtiene información detallada de cada persona
+    - Incluye faenas actuales, cargos y datos personales
+    
+    Parámetros de entrada:
+    - cargos[]: Lista de IDs de cargos para filtrar
+    - faena_id: ID de faena específica o 'sin_asignar'
+    
+    Retorna: JSON con lista de personas y sus datos completos
+    """
+    
+    # =============================================================================
+    # OBTENER PARÁMETROS DE FILTRADO
+    # =============================================================================
+    
+    # Intentar diferentes formas de obtener los cargos (compatibilidad con frontend)
     cargos_filter = request.GET.getlist('cargos')
     if not cargos_filter:
         cargos_filter = request.GET.getlist('cargos[]')
     if not cargos_filter:
         cargos_filter = request.GET.getlist('cargo_id')
     
+    # Obtener ID de faena para filtrar (puede ser específica o 'sin_asignar')
     faena_id = request.GET.get('faena_id')
+    
+    # =============================================================================
+    # DEBUG: IMPRIMIR PARÁMETROS RECIBIDOS
+    # =============================================================================
     
     # Debug: imprimir los parámetros recibidos
     print(f"DEBUG: cargos_filter recibido: {cargos_filter}")
@@ -91,7 +156,11 @@ def get_personas(request):
     print(f"DEBUG: request.GET.getlist('cargos[]'): {request.GET.getlist('cargos[]')}")
     print(f"DEBUG: request.GET.getlist('cargo_id'): {request.GET.getlist('cargo_id')}")
     
-    # Debug: verificar todas las asignaciones a la faena seleccionada
+    # =============================================================================
+    # VERIFICAR ASIGNACIONES A LA FAENA SELECCIONADA (DEBUG)
+    # =============================================================================
+    
+    # Si se selecciona una faena específica, verificar todas las asignaciones
     if faena_id and faena_id != 'sin_asignar':
         print(f"DEBUG: Verificando todas las asignaciones a la faena {faena_id}")
         todas_asignaciones = PersonalFaena.objects.filter(
@@ -104,10 +173,19 @@ def get_personas(request):
     elif faena_id == 'sin_asignar':
         print(f"DEBUG: Modo 'SIN ASIGNAR' - no se verificarán asignaciones específicas")
 
+    # =============================================================================
+    # QUERY BASE: OBTENER TODO EL PERSONAL ACTIVO
+    # =============================================================================
+    
+    # Obtener todas las personas activas en el sistema
     personas_qs = Personal.objects.filter(activo=True)
     print(f"DEBUG: Total de personal activo: {personas_qs.count()}")
     
-    # Debug: verificar que la relación InfoLaboral funcione
+    # =============================================================================
+    # VERIFICAR RELACIÓN INFOLABORAL (DEBUG)
+    # =============================================================================
+    
+    # Debug: verificar que la relación InfoLaboral funcione correctamente
     try:
         test_person = personas_qs.first()
         if test_person:
@@ -119,14 +197,21 @@ def get_personas(request):
     except Exception as e:
         print(f"DEBUG: Error al verificar InfoLaboral: {e}")
     
-    # Filtrar por cargos (usando InfoLaboral)
+    # =============================================================================
+    # FILTRADO POR CARGOS (PRIMER FILTRO)
+    # =============================================================================
+    
+    # Aplicar filtro de cargos si se especifican
     if cargos_filter:
         print(f"DEBUG: Aplicando filtro de cargos: {cargos_filter}")
-        # Filtrar por múltiples cargos usando Q objects para OR
+        
+        # Filtrar por múltiples cargos usando Q objects para OR lógico
         from django.db.models import Q
         cargo_filters = Q()
         for cargo_id in cargos_filter:
             cargo_filters |= Q(infolaboral__cargo_id=cargo_id)
+        
+        # Aplicar el filtro de cargos
         personas_qs = personas_qs.filter(cargo_filters)
         print(f"DEBUG: Query de cargos aplicado: {cargo_filters}")
         print(f"DEBUG: Personas después del filtro de cargos: {personas_qs.count()}")
@@ -145,50 +230,73 @@ def get_personas(request):
         personas_qs = Personal.objects.none()
         print("DEBUG: No se mostrará personal porque no hay cargos seleccionados")
     
-    # Filtrar por faena (usando la nueva relación PersonalFaena)
+    # =============================================================================
+    # FILTRADO POR FAENA (SEGUNDO FILTRO)
+    # =============================================================================
+    
+    # Aplicar filtro de faena si se especifica
     if faena_id:
         if faena_id == 'sin_asignar':
             print(f"DEBUG: Aplicando filtro 'SIN ASIGNAR'")
-            # Filtrar personas que NO tienen faenas asignadas
+            # Filtrar personas que NO tienen faenas asignadas activas
             personas_qs = personas_qs.exclude(
                 personalfaena__activo=True
             )
             print(f"DEBUG: Personas sin asignar: {personas_qs.count()}")
         else:
             print(f"DEBUG: Aplicando filtro de faena {faena_id}")
+            # Filtrar personas que SÍ tienen la faena específica asignada
             personas_qs = personas_qs.filter(
                 personalfaena__faena_id=faena_id,
                 personalfaena__activo=True
             )
             print(f"DEBUG: Personas después del filtro de faena: {personas_qs.count()}")
         
+        # Debug: mostrar qué personas pasan el filtro de faena
         for persona in personas_qs:
             print(f"DEBUG: Persona {persona.personal_id} - {persona.nombre} {persona.apepat} - Pasa filtro de faena")
 
+    # =============================================================================
+    # OPTIMIZACIÓN DE QUERY
+    # =============================================================================
+    
+    # Eliminar duplicados y optimizar con select_related
     personas_qs = personas_qs.distinct().select_related()
 
-    # Obtener faenas actuales de forma eficiente (múltiples faenas por persona)
+    # =============================================================================
+    # OBTENER INFORMACIÓN DETALLADA DE FAENAS Y CARGOS
+    # =============================================================================
+    
+    # Diccionarios para almacenar información de faenas y cargos por persona
     faenas_actuales = {}
     cargos_actuales = {}
     from datetime import date
     today = date.today()
     
-    # Si se filtra por faena específica, obtener solo esa faena
+    # =============================================================================
+    # CONSULTA DE ASIGNACIONES DE FAENA
+    # =============================================================================
+    
+    # Si se filtra por faena específica, obtener solo las asignaciones a esa faena
     if faena_id and faena_id != 'sin_asignar':
         asignaciones = PersonalFaena.objects.filter(
             personal_id__in=personas_qs,
             faena_id=faena_id,
             activo=True
-        ).values('personal_id', 'faena__nombre', 'faena_id', 'fecha_inicio', 'tipo_turno__nombre')
+        ).values('personal_id', 'faena__nombre', 'faena_id', 'fecha_inicio', 'tipo_turno__nombre', 'faena__tipo_turno__nombre')
     else:
         # Si no se filtra por faena o es 'sin_asignar', obtener todas las faenas activas de las personas
         asignaciones = PersonalFaena.objects.filter(
             personal_id__in=personas_qs,
             activo=True
-        ).values('personal_id', 'faena__nombre', 'faena_id', 'fecha_inicio', 'tipo_turno__nombre')
+        ).values('personal_id', 'faena__nombre', 'faena_id', 'fecha_inicio', 'tipo_turno__nombre', 'faena__tipo_turno__nombre')
     
-    # Debug: imprimir las asignaciones
+    # Debug: imprimir las asignaciones encontradas
     print(f"DEBUG: Asignaciones encontradas: {list(asignaciones)}")
+    
+    # =============================================================================
+    # PROCESAR ASIGNACIONES Y CONSTRUIR INFORMACIÓN DE FAENAS
+    # =============================================================================
     
     # Agrupar múltiples faenas por persona
     for asignacion in asignaciones:
@@ -196,15 +304,23 @@ def get_personas(request):
         if personal_id not in faenas_actuales:
             faenas_actuales[personal_id] = []
         
+        # Construir información de la faena con lógica de turno mejorada
+        # Si no hay turno específico asignado, usar el turno de la faena
+        turno_info = asignacion['tipo_turno__nombre'] or asignacion['faena__tipo_turno__nombre'] or 'Turno no especificado'
+        
         faenas_actuales[personal_id].append({
             'nombre': asignacion['faena__nombre'],
             'faena_id': asignacion['faena_id'],
             'fecha_inicio': asignacion['fecha_inicio'].isoformat() if asignacion['fecha_inicio'] else None,
-            'turno': asignacion['tipo_turno__nombre'] or 'Sin turno específico'
+            'turno': turno_info
         })
         print(f"DEBUG: Asignación para personal {personal_id}: {asignacion['faena__nombre']}")
     
-    # Obtener cargos actuales de cada persona
+    # =============================================================================
+    # OBTENER CARGOS ACTUALES DE CADA PERSONA
+    # =============================================================================
+    
+    # Para cada persona, obtener su cargo más reciente desde InfoLaboral
     for persona in personas_qs:
         cargos = persona.infolaboral_set.values_list('cargo_id__cargo', flat=True)
         if cargos:
@@ -213,37 +329,67 @@ def get_personas(request):
             cargos_actuales[persona.personal_id] = 'Sin cargo'
         print(f"DEBUG: Cargo para personal {persona.personal_id}: {cargos_actuales[persona.personal_id]}")
 
+    # =============================================================================
+    # CONSTRUIR RESPUESTA FINAL PARA EL FRONTEND
+    # =============================================================================
+    
+    # Lista que contendrá todos los datos de las personas
     data = []
     for p in personas_qs:
+        # Obtener faenas y cargo de la persona
         faenas_persona = faenas_actuales.get(p.personal_id, [])
         cargo_actual = cargos_actuales.get(p.personal_id, 'Sin cargo')
         
         # Para compatibilidad, mantener faena_actual como string (primera faena)
         faena_actual = faenas_persona[0]['nombre'] if faenas_persona else None
         
+        # Construir objeto de datos de la persona
         data.append({
             'id': p.personal_id,
             'nombre': f"{p.nombre} {p.apepat} {p.apemat}",
             'rut': f"{p.rut}-{p.dvrut}",
             'faena_actual': faena_actual,
             'faenas_detalladas': faenas_persona,  # Nueva información detallada
-            'cargo_actual': cargo_actual
+            'cargo_actual': cargo_actual,
+            'correo': p.correo,
+            'direccion': p.direccion,
+            'comuna_nombre': p.comuna_id.nombre if p.comuna_id else None,
+            'fechanac': p.fechanac
         })
+        
         # Debug: imprimir los datos de cada persona
         print(f"DEBUG: Persona {p.personal_id}: faena_actual = {faena_actual}, faenas_detalladas = {faenas_persona}, cargo_actual = {cargo_actual}")
     
+    # Debug: imprimir el resultado final
     print(f"DEBUG: Datos enviados al frontend: {data}")
+    
+    # Retornar respuesta JSON con todas las personas filtradas
     return JsonResponse({'results': data})
 
 
+# =============================================================================
+# API PARA OBTENER FAENAS
+# =============================================================================
+
 @require_GET
 def get_faenas(request):
-    """Obtener lista de todas las faenas activas más opción 'Sin Asignar'"""
+    """
+    Obtener lista de todas las faenas activas más opción 'Sin Asignar'
     
+    Esta función proporciona la lista de faenas para los filtros del frontend:
+    - Obtiene todas las faenas activas del sistema
+    - Incluye fechas de inicio y fin de cada faena
+    - Agrega opción "SIN ASIGNAR" para mostrar personal sin faena
+    
+    Retorna: JSON con lista de faenas y opción "SIN ASIGNAR"
+    """
+    
+    # Obtener todas las faenas activas ordenadas por nombre
     faenas = Faena.objects.filter(
         activo=True
     ).values('faena_id', 'nombre', 'fecha_inicio', 'fecha_fin').order_by('nombre')
     
+    # Construir lista de datos de faenas
     data = [
         {
             'id': item['faena_id'], 
@@ -254,7 +400,7 @@ def get_faenas(request):
         for item in faenas
     ]
     
-    # Agregar opción "SIN ASIGNAR" al final
+    # Agregar opción "SIN ASIGNAR" al final para filtrar personal sin faena
     data.append({
         'id': 'sin_asignar',
         'nombre': 'SIN ASIGNAR',
@@ -265,17 +411,101 @@ def get_faenas(request):
     return JsonResponse({'results': data})
 
 
+def get_faenas_for_audit(request):
+    """
+    Obtener lista de solo faenas reales (sin 'Sin Asignar') para filtros de auditoría
+    
+    Esta función es específica para el panel de logs de auditoría:
+    - Excluye la opción "SIN ASIGNAR" ya que no es una faena real
+    - Solo incluye faenas activas del sistema
+    - Se usa para filtrar logs por faena específica
+    
+    Retorna: JSON con lista de faenas reales únicamente
+    """
+    
+    # Obtener solo faenas activas (sin opciones virtuales)
+    faenas = Faena.objects.filter(
+        activo=True
+    ).values('faena_id', 'nombre').order_by('nombre')
+    
+    # Construir lista simple de faenas para filtros
+    data = [
+        {
+            'id': item['faena_id'], 
+            'nombre': item['nombre']
+        } 
+        for item in faenas
+    ]
+    
+    return JsonResponse({'results': data})
+
+
+# =============================================================================
+# API PARA OBTENER CARGOS
+# =============================================================================
+
 @require_GET
 def get_cargos(request):
-    """Obtener todos los cargos disponibles"""
+    """
+    Obtener todos los cargos disponibles en el sistema
+    
+    Esta función proporciona la lista de cargos para los filtros del frontend:
+    - Obtiene todos los cargos del sistema (RIGGER, OPERADOR, etc.)
+    - Se usa para filtrar personal por cargo específico
+    - Ordena los cargos alfabéticamente
+    
+    Retorna: JSON con lista de todos los cargos disponibles
+    """
+    
+    # Obtener todos los cargos ordenados alfabéticamente
     cargos = Cargo.objects.all().values('cargo_id', 'cargo').order_by('cargo')
+    
+    # Construir lista de cargos para el frontend
     data = [{'id': c['cargo_id'], 'nombre': c['cargo']} for c in cargos]
     return JsonResponse({'results': data})
 
 
+# =============================================================================
+# API PRINCIPAL: OBTENER ESTADOS DEL CALENDARIO
+# =============================================================================
+
 @require_GET
 def get_estados(request):
-    """Obtener estados de personas para un mes específico"""
+    """
+    OBTENER ESTADOS DE PERSONAS PARA UN MES ESPECÍFICO
+    
+    Esta es la función más importante del sistema de calendario:
+    - Calcula el estado de cada persona para cada día del mes
+    - Aplica múltiples capas de estados (faena, turno, descanso, licencias, etc.)
+    - Respeta las fechas de inicio y fin de las faenas
+    - Calcula automáticamente los ciclos de turnos (7x7, 14x7, etc.)
+    
+    FLUJO DE PROCESAMIENTO:
+    1. Obtener parámetros (mes, año, personas)
+    2. Cargar datos de licencias médicas y ausentismos
+    3. Aplicar asignaciones de faena (ESTADO BASE)
+    4. Calcular días de trabajo y descanso según turnos
+    5. Aplicar licencias médicas (prioridad alta)
+    6. Aplicar ausentismos (vacaciones, permisos, etc.)
+    7. Ordenar estados por prioridad visual
+    
+    SISTEMA DE PRIORIDADES:
+    - Prioridad 1: Estados base (disponible, en faena, descanso)
+    - Prioridad 2: Estados secundarios (turno, vacaciones, permiso)
+    - Prioridad 3: Estados de alta prioridad (licencia médica)
+    
+    Parámetros de entrada:
+    - month: Mes del año (1-12)
+    - year: Año (ej: 2025)
+    - personas[]: Lista de IDs de personas a consultar
+    
+    Retorna: JSON con estados de cada persona para cada día del mes
+    """
+    
+    # =============================================================================
+    # OBTENER PARÁMETROS DE ENTRADA
+    # =============================================================================
+    
     month = int(request.GET.get('month'))
     year = int(request.GET.get('year'))
     persona_ids = request.GET.getlist('personas[]') or request.GET.get('personas', '')
@@ -287,10 +517,18 @@ def get_estados(request):
     print(f"DEBUG: persona_ids recibidos: {persona_ids}")
     print(f"DEBUG: month: {month}, year: {year}, days_in_month: {days_in_month}")
 
-    # Preload data
+    # =============================================================================
+    # PRELOAD DE DATOS PRINCIPALES
+    # =============================================================================
+    
+    # Obtener objetos de Personal para las personas especificadas
     personas = Personal.objects.filter(personal_id__in=persona_ids)
 
-    # Licencias medicas overlapping this month
+    # =============================================================================
+    # CARGAR LICENCIAS MÉDICAS DEL MES
+    # =============================================================================
+    
+    # Obtener licencias médicas que se superponen con el mes consultado
     licencias = (
         LicenciaMedicaPorPersonal.objects
         .filter(
@@ -301,7 +539,11 @@ def get_estados(request):
         .values('personal_id', 'fechaEmision', 'fecha_fin_licencia')
     )
 
-    # Ausentismos para vacaciones/otros
+    # =============================================================================
+    # CARGAR AUSENTISMOS DEL MES
+    # =============================================================================
+    
+    # Obtener ausentismos (vacaciones, permisos, etc.) que se superponen con el mes
     ausentismos = (
         Ausentismo.objects
         .filter(
@@ -312,12 +554,20 @@ def get_estados(request):
         .values('personal_id', 'fechaini', 'fechafin', 'tipoausen_id__tipo')
     )
 
-    # Build map per persona per day with multiple states
+    # =============================================================================
+    # INICIALIZAR MAPA DE ESTADOS
+    # =============================================================================
+    
+    # Crear estructura de datos: persona -> día -> lista de estados
     results = {}
     for p in personas:
         results[str(p.personal_id)] = {str(d): [] for d in range(1, days_in_month + 1)}
 
-    # Helpers
+    # =============================================================================
+    # FUNCIÓN AUXILIAR PARA ITERAR DÍAS
+    # =============================================================================
+    
+    # Helper para iterar sobre un rango de días respetando límites del mes
     def iter_days(start, end):
         from datetime import timedelta
         current = max(start, date(year, month, 1))
@@ -326,9 +576,12 @@ def get_estados(request):
             yield current.day
             current += timedelta(days=1)
 
-    # Los estados se aplicarán después de crear el mapa de días en faena
+    # =============================================================================
+    # APLICAR ASIGNACIONES DE FAENA (ESTADO BASE)
+    # =============================================================================
 
-    # Aplicar asignaciones de faena (ESTADO BASE)
+    # Consulta optimizada para obtener todas las asignaciones de faena del mes
+    # Incluye información de turnos tanto de la persona como de la faena
     asignaciones_faena = (
         PersonalFaena.objects
         .filter(
@@ -337,61 +590,118 @@ def get_estados(request):
             fecha_inicio__lte=date(year, month, days_in_month)
         )
         .select_related('faena', 'tipo_turno', 'faena__tipo_turno')
-        .values('personal_id', 'faena_id', 'faena__nombre', 'fecha_inicio', 'tipo_turno__dias_trabajo', 
+        .values('personal_id', 'faena_id', 'faena__nombre', 'fecha_inicio', 'faena__fecha_fin', 'tipo_turno__dias_trabajo', 
                 'tipo_turno__dias_descanso', 'faena__tipo_turno__dias_trabajo', 
-                'faena__tipo_turno__dias_descanso')
+                'faena__tipo_turno__dias_descanso', 'faena__tipo_turno__nombre')
     )
     
-    # Crear mapa de días en faena y días de descanso para cada persona
+    # =============================================================================
+    # INICIALIZAR MAPAS DE DÍAS EN FAENA Y DESCANSO
+    # =============================================================================
+    
+    # Diccionarios para almacenar qué días cada persona está en faena o descanso
     dias_en_faena = {}
     dias_de_descanso = {}
     
     print(f"DEBUG: asignaciones_faena encontradas: {len(asignaciones_faena)}")
     for a in asignaciones_faena:
-        print(f"DEBUG: Asignación - Personal: {a['personal_id']}, Faena: {a['faena__nombre']}, Fecha inicio: {a['fecha_inicio']}")
+        print(f"DEBUG: Asignación - Personal: {a['personal_id']}, Faena: {a['faena__nombre']}, Fecha inicio: {a['fecha_inicio']}, Fecha fin faena: {a['faena__fecha_fin']}")
+    
+    # =============================================================================
+    # PROCESAR CADA ASIGNACIÓN DE FAENA
+    # =============================================================================
     
     for a in asignaciones_faena:
         personal_id_str = str(a['personal_id'])
+        
+        # Inicializar conjunto de días para esta persona si no existe
         if personal_id_str not in dias_en_faena:
             dias_en_faena[personal_id_str] = set()
         
-        # Calcular la fecha fin basándose en el turno
-        from datetime import timedelta
-        fecha_inicio = a['fecha_inicio']
+        # =============================================================================
+        # LÓGICA DE CÁLCULO DE TURNOS
+        # =============================================================================
         
         # Obtener el turno específico de la persona o usar el de la faena
+        # Si la persona tiene turno específico, se usa ese; si no, se usa el de la faena
         dias_trabajo = a['tipo_turno__dias_trabajo'] or a['faena__tipo_turno__dias_trabajo']
         dias_descanso = a['tipo_turno__dias_descanso'] or a['faena__tipo_turno__dias_descanso']
         
         if dias_trabajo and dias_descanso:
             print(f"DEBUG: Personal {personal_id_str} tiene turno {dias_trabajo}x{dias_descanso}")
-            # Calcular el ciclo completo del turno
+            
+            # =============================================================================
+            # CÁLCULO DE CICLOS DE TURNO
+            # =============================================================================
+            
+            # Calcular el ciclo completo del turno (trabajo + descanso)
             duracion_ciclo = dias_trabajo + dias_descanso
             
+            # Obtener la fecha fin de la faena para limitar los turnos
+            fecha_fin_faena = a['faena__fecha_fin']
+            if fecha_fin_faena:
+                print(f"DEBUG: Personal {personal_id_str} - Faena termina el {fecha_fin_faena}")
+            
+            # =============================================================================
+            # CALCULAR DÍAS DE TRABAJO Y DESCANSO PARA CADA DÍA DEL MES
+            # =============================================================================
+            
             # Para cada día del mes, determinar si está en trabajo o descanso
+            print(f"DEBUG: Personal {personal_id_str} - Calculando días para mes {month}/{year}, faena termina: {fecha_fin_faena}")
             for d in range(1, days_in_month + 1):
                 fecha_actual = date(year, month, d)
-                dias_desde_inicio_actual = (fecha_actual - fecha_inicio).days
+                
+                # =============================================================================
+                # RESPETAR FECHA FIN DE FAENA
+                # =============================================================================
+                
+                # Verificar que la fecha actual no sobrepase la fecha fin de la faena
+                if fecha_fin_faena and fecha_actual > fecha_fin_faena:
+                    print(f"DEBUG: Personal {personal_id_str} - Día {d} ({fecha_actual}) sobrepasa fecha fin de faena ({fecha_fin_faena}) - SALTANDO")
+                    continue
+                
+                # =============================================================================
+                # CALCULAR POSICIÓN EN EL CICLO DE TURNO
+                # =============================================================================
+                
+                # Calcular cuántos días han pasado desde el inicio de la asignación
+                dias_desde_inicio_actual = (fecha_actual - a['fecha_inicio']).days
                 
                 if dias_desde_inicio_actual >= 0:  # Solo días futuros al inicio de la asignación
+                    # Calcular en qué posición del ciclo está este día
                     dia_en_ciclo_actual = dias_desde_inicio_actual % duracion_ciclo
                     
                     if dia_en_ciclo_actual < dias_trabajo:
-                        # Está en días de trabajo
+                        # Está en días de trabajo - agregar a días en faena
                         dias_en_faena[personal_id_str].add(d)
                     else:
-                        # Está en días de descanso
+                        # Está en días de descanso - agregar a días de descanso
                         if personal_id_str not in dias_de_descanso:
                             dias_de_descanso[personal_id_str] = set()
                         dias_de_descanso[personal_id_str].add(d)
             
+            # Debug: mostrar resultados del cálculo
             print(f"DEBUG: Personal {personal_id_str} - Días en faena: {sorted(dias_en_faena[personal_id_str])}")
             print(f"DEBUG: Personal {personal_id_str} - Días de descanso: {sorted(dias_de_descanso.get(personal_id_str, set()))}")
+            
         else:
             print(f"DEBUG: Personal {personal_id_str} NO tiene turno definido")
+            
+            # =============================================================================
+            # CASO SIN TURNO DEFINIDO
+            # =============================================================================
+            
             # Si no hay turno definido, asumir que está en faena todos los días
-            fecha_fin = min(date(year, month, days_in_month), fecha_inicio + timedelta(days=30))
-            for d in iter_days(fecha_inicio, fecha_fin):
+            # Pero respetar la fecha fin de la faena
+            fecha_fin = a['fecha_inicio'] + timedelta(days=30)
+            if a['faena__fecha_fin']:
+                fecha_fin = min(fecha_fin, a['faena__fecha_fin'])
+            fecha_fin = min(date(year, month, days_in_month), fecha_fin)
+            
+            print(f"DEBUG: Personal {personal_id_str} - Fecha fin calculada: {fecha_fin}")
+            
+            # Agregar todos los días desde inicio hasta fin como días en faena
+            for d in iter_days(a['fecha_inicio'], fecha_fin):
                 dias_en_faena[personal_id_str].add(d)
     
     # Aplicar estados múltiples por día
@@ -409,7 +719,12 @@ def get_estados(request):
                 for a in asignaciones_faena:
                     if str(a['personal_id']) == pid:
                         fecha_inicio = a['fecha_inicio']
-                        fecha_fin = min(date(year, month, days_in_month), fecha_inicio + timedelta(days=30))
+                        # Respetar la fecha fin de la faena
+                        fecha_fin = fecha_inicio + timedelta(days=30)
+                        if a['faena__fecha_fin']:
+                            fecha_fin = min(fecha_fin, a['faena__fecha_fin'])
+                        fecha_fin = min(date(year, month, days_in_month), fecha_fin)
+                        
                         if fecha_inicio <= date(year, month, day_num) <= fecha_fin:
                             faena_nombre = a['faena__nombre']
                             break
@@ -420,6 +735,7 @@ def get_estados(request):
                     if str(a['personal_id']) == pid:
                         fecha_inicio = a['fecha_inicio']
                         # Calcular fecha fin basándose en el turno o usar un límite razonable
+                        # Pero respetar la fecha fin de la faena
                         if a['tipo_turno__dias_trabajo'] and a['tipo_turno__dias_descanso']:
                             # Si hay turno, calcular fecha fin basándose en el turno
                             dias_ciclo = a['tipo_turno__dias_trabajo'] + a['tipo_turno__dias_descanso']
@@ -427,6 +743,10 @@ def get_estados(request):
                         else:
                             # Si no hay turno, usar un límite de 30 días
                             fecha_fin = fecha_inicio + timedelta(days=30)
+                        
+                        # Respetar la fecha fin de la faena si está definida
+                        if a['faena__fecha_fin']:
+                            fecha_fin = min(fecha_fin, a['faena__fecha_fin'])
                         
                         fecha_fin = min(date(year, month, days_in_month), fecha_fin)
                         
@@ -437,7 +757,7 @@ def get_estados(request):
                                 'faena_id': a['faena_id'],
                                 'faena_nombre': a['faena__nombre'],
                                 'fecha_inicio': fecha_inicio_str,
-                                'turno': f"{a['tipo_turno__dias_trabajo']}x{a['tipo_turno__dias_descanso']}" if a['tipo_turno__dias_trabajo'] and a['tipo_turno__dias_descanso'] else "Sin turno específico"
+                                'turno': f"{a['tipo_turno__dias_trabajo']}x{a['tipo_turno__dias_descanso']}" if a['tipo_turno__dias_trabajo'] and a['tipo_turno__dias_descanso'] else a['faena__tipo_turno__nombre'] or 'Turno no especificado'
                             }
                             break
                 
@@ -473,6 +793,7 @@ def get_estados(request):
                     if str(a['personal_id']) == pid:
                         fecha_inicio = a['fecha_inicio']
                         # Calcular fecha fin basándose en el turno o usar un límite razonable
+                        # Pero respetar la fecha fin de la faena
                         if a['tipo_turno__dias_trabajo'] and a['tipo_turno__dias_descanso']:
                             # Si hay turno, calcular fecha fin basándose en el turno
                             dias_ciclo = a['tipo_turno__dias_trabajo'] + a['tipo_turno__dias_descanso']
@@ -480,6 +801,10 @@ def get_estados(request):
                         else:
                             # Si no hay turno, usar un límite de 30 días
                             fecha_fin = fecha_inicio + timedelta(days=30)
+                        
+                        # Respetar la fecha fin de la faena si está definida
+                        if a['faena__fecha_fin']:
+                            fecha_fin = min(fecha_fin, a['faena__fecha_fin'])
                         
                         fecha_fin = min(date(year, month, days_in_month), fecha_fin)
                         
@@ -490,7 +815,7 @@ def get_estados(request):
                                 'faena_id': a['faena_id'],
                                 'faena_nombre': a['faena__nombre'],
                                 'fecha_inicio': fecha_inicio_str,
-                                'turno': f"{a['tipo_turno__dias_trabajo']}x{a['tipo_turno__dias_descanso']}" if a['tipo_turno__dias_trabajo'] and a['tipo_turno__dias_descanso'] else "Sin turno específico"
+                                'turno': f"{a['tipo_turno__dias_trabajo']}x{a['tipo_turno__dias_descanso']}" if a['tipo_turno__dias_trabajo'] and a['tipo_turno__dias_descanso'] else a['faena__tipo_turno__nombre'] or 'Turno no especificado'
                             }
                             break
                 
@@ -613,7 +938,11 @@ def get_estados(request):
                         if estado['tipo'] != 'disponible'
                     ]
 
-    # ORDENAR ESTADOS POR PRIORIDAD ANTES DE ENVIAR AL FRONTEND
+    # =============================================================================
+    # ORDENAR ESTADOS POR PRIORIDAD Y PREPARAR RESPUESTA FINAL
+    # =============================================================================
+    
+    # SISTEMA DE PRIORIDADES VISUALES:
     # Prioridad 1: Estados base (disponible, en faena, descanso) - Se muestran ARRIBA
     # Prioridad 2: Estados secundarios (turno, vacaciones, permiso) - Se muestran ABAJO
     # Prioridad 3: Estados de alta prioridad (licencia médica) - Se muestran AL FINAL
@@ -623,40 +952,72 @@ def get_estados(request):
     
     for pid, days in results.items():
         for d, estados in days.items():
+            # =============================================================================
+            # ORDENAR ESTADOS POR PRIORIDAD VISUAL
+            # =============================================================================
+            
             # Ordenar estados por prioridad (menor número = mayor prioridad visual)
+            # Esto determina el orden en que se muestran los estados en el calendario
             estados.sort(key=lambda x: x['prioridad'])
             
             # Debug: mostrar el orden final de estados para cada día
             if estados:
                 print(f"DEBUG: Persona {pid}, Día {d} - Estados ordenados: {[estado['tipo'] for estado in estados]}")
 
-    # Debug: imprimir el resultado
+    # =============================================================================
+    # DEBUG: IMPRIMIR RESULTADO FINAL
+    # =============================================================================
+    
+    # Debug: imprimir el resultado completo para verificación
     print(f"DEBUG: resultados para {len(results)} personas")
     for pid, days in results.items():
         print(f"  Persona {pid}: {len([d for d in days.values() if d])} días con estados")
-        # Mostrar algunos ejemplos de estados
+        # Mostrar algunos ejemplos de estados (solo primeros 3 días para no saturar)
         for day, estados in list(days.items())[:3]:  # Solo primeros 3 días
             if estados:
                 print(f"    Día {day}: {estados}")
 
+    # =============================================================================
+    # RETORNAR RESPUESTA JSON AL FRONTEND
+    # =============================================================================
+    
+    # Retornar el mapa completo de estados para todas las personas y días
     return JsonResponse({'results': results})
 
 
+# =============================================================================
+# API PARA OBTENER TURNOS
+# =============================================================================
+
 @require_GET
 def get_turnos(request):
-    """Obtener lista de turnos disponibles"""
+    """
+    Obtener lista de turnos disponibles en el sistema
+    
+    Esta función proporciona la lista de turnos para las asignaciones:
+    - Obtiene todos los turnos activos (7x7, 14x7, etc.)
+    - Se usa al asignar personal a faenas
+    - Incluye debug logs para troubleshooting
+    
+    Retorna: JSON con lista de turnos activos
+    """
     try:
         print(f"DEBUG: get_turnos - Iniciando...")
+        
+        # Obtener todos los turnos activos ordenados por nombre
         turnos = TipoTurno.objects.filter(activo=True).values('tipo_turno_id', 'nombre').order_by('nombre')
         print(f"DEBUG: get_turnos - Query ejecutada, {turnos.count()} turnos encontrados")
         
+        # Convertir QuerySet a lista para mejor manejo
         turnos_list = list(turnos)
         print(f"DEBUG: get_turnos - Turnos convertidos a lista: {turnos_list}")
         
+        # Construir respuesta final
         response_data = {'results': turnos_list}
         print(f"DEBUG: get_turnos - Respuesta final: {response_data}")
         
         return JsonResponse(response_data)
+        
     except Exception as e:
         print(f"ERROR en get_turnos: {str(e)}")
         import traceback
@@ -664,19 +1025,37 @@ def get_turnos(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+# =============================================================================
+# API PARA OBTENER INFORMACIÓN DE FAENA Y TURNO
+# =============================================================================
+
 @require_GET
 def get_faena_turno(request, faena_id):
-    """Obtener el turno y fechas de una faena específica"""
+    """
+    Obtener el turno y fechas de una faena específica
+    
+    Esta función se usa para obtener información detallada de una faena:
+    - Obtiene el turno asignado a la faena
+    - Incluye fechas de inicio y fin de la faena
+    - Se usa para validaciones en el frontend
+    
+    Parámetros:
+    - faena_id: ID de la faena a consultar
+    
+    Retorna: JSON con información de turno y fechas de la faena
+    """
     try:
+        # Obtener la faena específica
         faena = Faena.objects.get(faena_id=faena_id)
         
-        # Información del turno
+        # Información del turno (puede ser None si no tiene turno asignado)
         turno_info = faena.tipo_turno.nombre if faena.tipo_turno else 'No especificado'
         
-        # Información de fechas
+        # Información de fechas en formato dd/mm/yyyy
         fecha_inicio = faena.fecha_inicio.strftime('%d/%m/%Y') if faena.fecha_inicio else 'No especificada'
         fecha_fin = faena.fecha_fin.strftime('%d/%m/%Y') if faena.fecha_fin else 'No especificada'
         
+        # Construir respuesta con toda la información
         return JsonResponse({
             'success': True, 
             'turno': turno_info,
@@ -684,11 +1063,16 @@ def get_faena_turno(request, faena_id):
             'fecha_fin': fecha_fin,
             'nombre_faena': faena.nombre
         })
+        
     except Faena.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Faena no encontrada'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
+
+# =============================================================================
+# API PARA ASIGNAR PERSONAL A FAENAS
+# =============================================================================
 
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -698,7 +1082,36 @@ import json
 @csrf_exempt
 @require_POST
 def assign_personal_to_faena(request):
-    """Asignar personal a una faena"""
+    """
+    ASIGNAR PERSONAL A UNA FAENA ESPECÍFICA
+    
+    Esta función es el corazón del sistema de asignación de personal:
+    - Permite asignar personal a faenas con fechas específicas
+    - Valida que las fechas estén dentro del rango de la faena
+    - Verifica que los turnos no sobrepasen la fecha fin de la faena
+    - Maneja tanto nuevas asignaciones como ediciones
+    - Crea logs de auditoría para todas las operaciones
+    
+    FLUJO DE VALIDACIÓN:
+    1. Validar que la fecha de inicio esté dentro del rango de la faena
+    2. Si hay turno, verificar que no sobrepase la fecha fin de la faena
+    3. Calcular ciclos de turno y validar duración total
+    
+    FLUJO DE ASIGNACIÓN:
+    1. Verificar si ya existe una asignación para la misma fecha
+    2. Si existe, actualizar; si no, crear nueva
+    3. Desactivar otras asignaciones activas a la misma faena
+    4. Crear log de auditoría con todos los cambios
+    
+    Parámetros de entrada:
+    - personal_id: ID de la persona a asignar
+    - faena_id: ID de la faena destino
+    - turno_id: ID del turno (opcional)
+    - fecha_inicio: Fecha de inicio de la asignación (YYYY-MM-DD)
+    - is_editing: Boolean indicando si es edición o nueva asignación
+    
+    Retorna: JSON con resultado de la operación
+    """
     try:
         print(f"DEBUG: assign_personal_to_faena - Request body: {request.body}")
         print(f"DEBUG: Request method: {request.method}")
@@ -771,6 +1184,56 @@ def assign_personal_to_faena(request):
         
         print(f"DEBUG: is_editing normalizado: {is_editing} (tipo: {type(is_editing)})")
         
+        # Validaciones adicionales antes de procesar
+        try:
+            # Obtener la faena para validaciones
+            faena = Faena.objects.get(faena_id=faena_id)
+            personal = Personal.objects.get(personal_id=personal_id)
+            
+            # Convertir fecha_inicio a objeto date
+            from datetime import datetime
+            fecha_inicio_obj = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+            
+            # Validar que la fecha de inicio esté dentro del rango de la faena
+            if fecha_inicio_obj < faena.fecha_inicio:
+                return JsonResponse({
+                    'success': False, 
+                    'error': f'La fecha de inicio ({fecha_inicio_obj.strftime("%d/%m/%Y")}) no puede ser anterior al inicio de la faena ({faena.fecha_inicio.strftime("%d/%m/%Y")})'
+                })
+            
+            if faena.fecha_fin and fecha_inicio_obj > faena.fecha_fin:
+                return JsonResponse({
+                    'success': False, 
+                    'error': f'La fecha de inicio ({fecha_inicio_obj.strftime("%d/%m/%Y")}) no puede ser posterior al fin de la faena ({faena.fecha_fin.strftime("%d/%m/%Y")})'
+                })
+            
+            # Validar que si hay turno, los turnos no sobrepasen la fecha fin de la faena
+            if turno_id and faena.fecha_fin:
+                tipo_turno = TipoTurno.objects.get(tipo_turno_id=turno_id)
+                
+                # Calcular cuántos ciclos completos puede hacer la persona
+                dias_disponibles = (faena.fecha_fin - fecha_inicio_obj).days + 1
+                ciclos_completos = dias_disponibles // tipo_turno.duracion_ciclo
+                dias_trabajo_total = ciclos_completos * tipo_turno.dias_trabajo
+                
+                # La fecha fin será inicio + días de trabajo
+                fecha_fin_calculada = fecha_inicio_obj + timedelta(days=dias_trabajo_total - 1)
+                
+                if fecha_fin_calculada > faena.fecha_fin:
+                    return JsonResponse({
+                        'success': False, 
+                        'error': f'Los turnos asignados se extienden más allá de la fecha de fin de la faena. '
+                                f'La asignación terminaría el {fecha_fin_calculada.strftime("%d/%m/%Y")} pero la faena termina el {faena.fecha_fin.strftime("%d/%m/%Y")}. '
+                                f'Considere ajustar la fecha de inicio o el turno.'
+                    })
+                    
+        except (Faena.DoesNotExist, Personal.DoesNotExist, TipoTurno.DoesNotExist) as e:
+            return JsonResponse({'success': False, 'error': f'Error al obtener datos: {str(e)}'})
+        except ValueError as e:
+            return JsonResponse({'success': False, 'error': f'Error en formato de fecha: {str(e)}'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error en validación: {str(e)}'})
+        
         if is_editing:
             # Modo edición: actualizar la asignación existente
             print(f"DEBUG: Modo edición - actualizando asignación existente...")
@@ -790,6 +1253,9 @@ def assign_personal_to_faena(request):
                 # Actualizar campos
                 asignacion_existente.tipo_turno_id = turno_id
                 asignacion_existente.fecha_inicio = fecha_inicio
+                
+                # Validar antes de guardar
+                asignacion_existente.full_clean()
                 asignacion_existente.save()
                 
                 # Crear log de auditoría para la edición
@@ -810,7 +1276,8 @@ def assign_personal_to_faena(request):
                         datos_anteriores=datos_anteriores,
                         datos_nuevos={
                             'tipo_turno_id': turno_id,
-                            'fecha_inicio': fecha_inicio
+                            'fecha_inicio': fecha_inicio,
+                            'personal_rut': f"{personal.rut}-{personal.dvrut}"
                         },
                         ip_address=get_client_ip(request)
                     )
@@ -838,22 +1305,44 @@ def assign_personal_to_faena(request):
             )
             print(f"DEBUG: Asignaciones existentes encontradas: {asignaciones_existentes.count()}")
             
-            if asignaciones_existentes.exists():
-                print(f"DEBUG: Desactivando asignaciones existentes...")
-                asignaciones_existentes.update(activo=False)
-                print(f"DEBUG: Asignaciones desactivadas exitosamente")
-            
-            # Crear nueva asignación
-            print(f"DEBUG: Creando nueva asignación...")
-            nueva_asignacion = PersonalFaena.objects.create(
+            # Verificar si ya existe una asignación con la misma fecha de inicio
+            asignacion_misma_fecha = PersonalFaena.objects.filter(
                 personal_id=personal_id,
                 faena_id=faena_id,
-                tipo_turno_id=turno_id,
-                fecha_inicio=fecha_inicio,
-                activo=True
-            )
+                fecha_inicio=fecha_inicio
+            ).first()
             
-            print(f"DEBUG: Nueva asignación creada exitosamente con ID: {nueva_asignacion.personal_faena_id}")
+            if asignacion_misma_fecha:
+                print(f"DEBUG: Ya existe una asignación con la misma fecha de inicio, actualizando...")
+                # Actualizar la asignación existente
+                asignacion_misma_fecha.tipo_turno_id = turno_id
+                asignacion_misma_fecha.activo = True
+                asignacion_misma_fecha.full_clean()
+                asignacion_misma_fecha.save()
+                
+                nueva_asignacion = asignacion_misma_fecha
+                print(f"DEBUG: Asignación existente actualizada exitosamente")
+            else:
+                # Desactivar asignaciones existentes a la misma faena
+                if asignaciones_existentes.exists():
+                    print(f"DEBUG: Desactivando asignaciones existentes...")
+                    asignaciones_existentes.update(activo=False)
+                    print(f"DEBUG: Asignaciones desactivadas exitosamente")
+                
+                # Crear nueva asignación
+                print(f"DEBUG: Creando nueva asignación...")
+                nueva_asignacion = PersonalFaena(
+                    personal_id=personal_id,
+                    faena_id=faena_id,
+                    tipo_turno_id=turno_id,
+                    fecha_inicio=fecha_inicio,
+                    activo=True
+                )
+                
+                # Validar antes de guardar
+                nueva_asignacion.full_clean()
+                nueva_asignacion.save()
+                print(f"DEBUG: Nueva asignación creada exitosamente con ID: {nueva_asignacion.personal_faena_id}")
             
             # Crear log de auditoría
             try:
@@ -864,20 +1353,26 @@ def assign_personal_to_faena(request):
                 
                 descripcion = f"Se asignó a {personal.nombre} {personal.apepat} a la faena '{faena.nombre}' desde {fecha_inicio}{turno_info}"
                 
+                # Debug: mostrar exactamente qué datos se van a guardar
+                datos_log = {
+                    'personal_id': personal_id,
+                    'personal_nombre': f"{personal.nombre} {personal.apepat}",
+                    'personal_rut': f"{personal.rut}-{personal.dvrut}",
+                    'faena_id': faena_id,
+                    'faena_nombre': faena.nombre,
+                    'fecha_inicio': fecha_inicio,
+                    'turno_id': turno_id
+                }
+                print(f"DEBUG: Datos que se van a guardar en el log: {datos_log}")
+                print(f"DEBUG: personal.rut = {personal.rut}, personal.dvrut = {personal.dvrut}")
+                
                 AuditLog.crear_log(
                     accion='asignar',
                     tabla_afectada='PersonalFaena',
                     registro_id=nueva_asignacion.personal_faena_id,
                     descripcion=descripcion,
                     usuario=get_current_user_name(request),
-                    datos_nuevos={
-                        'personal_id': personal_id,
-                        'personal_nombre': f"{personal.nombre} {personal.apepat}",
-                        'faena_id': faena_id,
-                        'faena_nombre': faena.nombre,
-                        'fecha_inicio': fecha_inicio,
-                        'turno_id': turno_id
-                    },
+                    datos_nuevos=datos_log,
                     ip_address=get_client_ip(request)
                 )
                 print(f"DEBUG: Log de auditoría creado exitosamente")
@@ -896,7 +1391,21 @@ def assign_personal_to_faena(request):
 @csrf_exempt
 @require_POST
 def remove_personal_from_faena(request):
-    """Remover personal de una faena específica o todas las faenas"""
+    """
+    REMOVER PERSONAL DE UNA FAENA ESPECÍFICA O TODAS LAS FAENAS
+    
+    Esta función permite remover personal de faenas:
+    - Si se especifica faena_id: remueve solo de esa faena
+    - Si no se especifica: remueve de todas las faenas
+    - Desactiva las asignaciones (no las elimina físicamente)
+    - Crea logs de auditoría para todas las operaciones
+    
+    Parámetros de entrada:
+    - personal_id: ID de la persona a remover
+    - faena_id: ID de la faena específica (opcional)
+    
+    Retorna: JSON con resultado de la operación
+    """
     try:
         print(f"DEBUG: remove_personal_from_faena - Request body: {request.body}")
         print(f"DEBUG: Request method: {request.method}")
@@ -1000,6 +1509,7 @@ def remove_personal_from_faena(request):
                             usuario=get_current_user_name(request),
                             datos_anteriores={
                                 'personal_id': asignacion.personal_id,
+                                'personal_rut': f"{personal.rut}-{personal.dvrut}",
                                 'faena_id': asignacion.faena_id,
                                 'tipo_turno_id': asignacion.tipo_turno_id,
                                 'fecha_inicio': asignacion.fecha_inicio.strftime('%Y-%m-%d') if asignacion.fecha_inicio else None,
@@ -1047,6 +1557,7 @@ def remove_personal_from_faena(request):
                             usuario=get_current_user_name(request),
                             datos_anteriores={
                                 'personal_id': asignacion.personal_id,
+                                'personal_rut': f"{personal.rut}-{personal.dvrut}",
                                 'faena_id': asignacion.faena_id,
                                 'tipo_turno_id': asignacion.tipo_turno_id,
                                 'fecha_inicio': asignacion.fecha_inicio.strftime('%Y-%m-%d') if asignacion.fecha_inicio else None,
@@ -1073,33 +1584,145 @@ def remove_personal_from_faena(request):
 
 @require_GET
 def get_audit_logs(request):
-    """Obtener logs de auditoría para mostrar en el panel lateral"""
+    """
+    OBTENER LOGS DE AUDITORÍA PARA MOSTRAR EN EL PANEL LATERAL
+    
+    Esta función proporciona acceso a todos los logs de auditoría del sistema:
+    - Registra todas las acciones realizadas en el sistema
+    - Permite filtrar por tipo de acción, tabla, usuario, personal y faena
+    - Incluye información detallada de cada cambio
+    - Se usa para rastrear quién hizo qué y cuándo
+    
+    SISTEMA DE FILTRADO:
+    - accion: Filtrar por tipo de acción (asignar, remover, editar)
+    - tabla: Filtrar por tabla afectada (PersonalFaena, Personal, etc.)
+    - usuario: Filtrar por usuario que realizó el cambio
+    - personal: Filtrar por nombre o RUT del personal afectado
+    - faena: Filtrar por nombre o ID de la faena afectada
+    
+    BÚSQUEDA INTELIGENTE:
+    - Busca en campos JSON (datos_nuevos, datos_anteriores)
+    - Busca en descripción del log
+    - Combina múltiples criterios con lógica OR
+    - Incluye búsqueda por RUT del personal
+    
+    Parámetros de entrada:
+    - limit: Número máximo de logs a retornar (default: 50)
+    - accion: Filtrar por tipo de acción
+    - tabla: Filtrar por tabla afectada
+    - usuario: Filtrar por usuario que realizó el cambio
+    - personal: Filtrar por nombre o RUT del personal afectado
+    - faena: Filtrar por nombre o ID de la faena afectada
+    
+    Retorna: JSON con lista de logs filtrados y ordenados por fecha
+    """
     try:
         # Obtener parámetros de filtrado
         limit = int(request.GET.get('limit', 50))  # Límite de logs a mostrar
         accion = request.GET.get('accion', '')  # Filtrar por tipo de acción
         tabla = request.GET.get('tabla', '')  # Filtrar por tabla afectada
-        usuario = request.GET.get('usuario', '')  # Filtrar por usuario
+        usuario = request.GET.get('usuario', '')  # Filtrar por usuario que realizó el cambio
+        personal_filter = request.GET.get('personal', '')  # Filtrar por nombre o RUT del personal afectado
+        faena_filter = request.GET.get('faena', '')  # Filtrar por faena
+        
+        print(f"DEBUG: Parámetros recibidos - accion: {accion}, usuario: {usuario}, personal_filter: {personal_filter}, faena_filter: {faena_filter}")
         
         # Construir query base
         logs = AuditLog.objects.all()
+        print(f"DEBUG: Total de logs antes de filtros: {logs.count()}")
         
         # Aplicar filtros si se especifican
         if accion:
             logs = logs.filter(accion__icontains=accion)
+            print(f"DEBUG: Después de filtro de acción: {logs.count()}")
         if tabla:
             logs = logs.filter(tabla_afectada__icontains=tabla)
-        if usuario:
+            print(f"DEBUG: Después de filtro de tabla: {logs.count()}")
+        
+        # Filtrar por usuario (quien realizó el cambio) - SOLO si se especifica explícitamente
+        if usuario and usuario.strip():
             logs = logs.filter(usuario__icontains=usuario)
+            print(f"DEBUG: Después de filtro de usuario: {logs.count()}")
+        
+        # Filtrar por personal (nombre o RUT del personal afectado)
+        if personal_filter and personal_filter.strip():
+            print(f"DEBUG: Aplicando filtro de personal: {personal_filter}")
+            
+            # Debug: mostrar algunos logs antes de filtrar para entender la estructura
+            print(f"DEBUG: Estructura de logs antes de filtrar:")
+            sample_logs = logs[:3]
+            for i, log in enumerate(sample_logs):
+                print(f"  Log {i+1}:")
+                print(f"    - descripcion: '{log.descripcion}'")
+                print(f"    - datos_nuevos: {log.datos_nuevos}")
+                print(f"    - datos_anteriores: {log.datos_anteriores}")
+                if log.datos_nuevos:
+                    print(f"    - personal_nombre en datos_nuevos: {log.datos_nuevos.get('personal_nombre', 'N/A')}")
+                    print(f"    - personal_rut en datos_nuevos: {log.datos_nuevos.get('personal_rut', 'N/A')}")
+                if log.datos_anteriores:
+                    print(f"    - personal_nombre en datos_anteriores: {log.datos_anteriores.get('personal_nombre', 'N/A')}")
+                    print(f"    - personal_rut en datos_anteriores: {log.datos_anteriores.get('personal_rut', 'N/A')}")
+            
+            # Usar un solo query que busque en todos los campos relevantes
+            personal_q = Q(descripcion__icontains=personal_filter)
+            personal_q |= Q(datos_nuevos__personal_nombre__icontains=personal_filter)
+            personal_q |= Q(datos_nuevos__personal_rut__icontains=personal_filter)
+            personal_q |= Q(datos_anteriores__personal_nombre__icontains=personal_filter)
+            personal_q |= Q(datos_anteriores__personal_rut__icontains=personal_filter)
+            
+            # También buscar en cualquier parte de los datos JSON como fallback
+            personal_q |= Q(datos_nuevos__icontains=personal_filter)
+            personal_q |= Q(datos_anteriores__icontains=personal_filter)
+            
+            logs = logs.filter(personal_q)
+            print(f"DEBUG: Total de logs después de filtro de personal: {logs.count()}")
+            
+            # Debug: mostrar algunos ejemplos de lo que se encontró
+            if logs.count() > 0:
+                print(f"DEBUG: Ejemplos de logs encontrados:")
+                for i, log in enumerate(logs[:3]):
+                    print(f"  Log {i+1}: descripcion='{log.descripcion}', datos_nuevos={log.datos_nuevos}")
+            else:
+                print(f"DEBUG: No se encontraron logs con el filtro: {personal_filter}")
+                print(f"DEBUG: Intentando búsqueda más simple...")
+                
+                # Intentar búsqueda más simple solo en descripción
+                simple_logs = logs.filter(descripcion__icontains=personal_filter)
+                print(f"DEBUG: Logs encontrados solo en descripción: {simple_logs.count()}")
+                
+                if simple_logs.count() > 0:
+                    print(f"DEBUG: Ejemplos de logs encontrados en descripción:")
+                    for i, log in enumerate(simple_logs[:3]):
+                        print(f"  Log {i+1}: descripcion='{log.descripcion}'")
+        
+        # Filtrar por faena
+        if faena_filter and faena_filter.strip():
+            print(f"DEBUG: Aplicando filtro de faena: {faena_filter}")
+            # Buscar en todos los logs que puedan contener información de la faena
+            # Incluir búsqueda en descripción y datos JSON
+            faena_q = Q(descripcion__icontains=faena_filter)
+            
+            # Buscar en datos_nuevos y datos_anteriores JSON fields
+            faena_q |= Q(datos_nuevos__faena_nombre__icontains=faena_filter)
+            faena_q |= Q(datos_nuevos__faena_id__icontains=faena_filter)
+            faena_q |= Q(datos_anteriores__faena_nombre__icontains=faena_filter)
+            faena_q |= Q(datos_anteriores__faena_id__icontains=faena_filter)
+            
+            logs = logs.filter(faena_q)
+            print(f"DEBUG: Después de filtro de faena: {logs.count()}")
         
         # Limitar resultados y ordenar por fecha más reciente
-        logs = logs[:limit]
+        logs = logs.order_by('-fecha_hora')[:limit]
+        print(f"DEBUG: Logs finales después de límite: {len(logs)}")
         
         # Preparar datos para el frontend
         logs_data = []
         for log in logs:
             # Obtener información adicional del cargo si es una asignación de personal
             cargo_info = 'N/A'
+            personal_info = 'N/A'
+            faena_info = 'N/A'
+            
             if log.tabla_afectada == 'PersonalFaena':
                 try:
                     # Buscar la asignación para obtener el cargo
@@ -1111,16 +1734,26 @@ def get_audit_logs(request):
                             cargo_info = ultimo_cargo.cargo_id.cargo
                         else:
                             cargo_info = 'Sin cargo asignado'
-                                
+                        
+                        # Información del personal
+                        personal_info = f"{asignacion.personal.nombre} {asignacion.personal.apepat} ({asignacion.personal.rut}-{asignacion.personal.dvrut})"
+                        
+                        # Información de la faena
+                        faena_info = asignacion.faena.nombre
+                            
                 except Exception as e:
-                    print(f"Error obteniendo cargo para log {log.log_id}: {str(e)}")
+                    print(f"Error obteniendo información para log {log.log_id}: {str(e)}")
                     cargo_info = 'Cargo no disponible'
+                    personal_info = 'Personal no disponible'
+                    faena_info = 'Faena no disponible'
             
             logs_data.append({
                 'id': log.log_id,
                 'usuario': log.usuario or 'Usuario Calendario',
                 'accion': log.accion,
                 'cargo': cargo_info,
+                'personal': personal_info,
+                'faena': faena_info,
                 'descripcion': log.descripcion,
                 'fecha_hora': timezone.localtime(log.fecha_hora).strftime('%d/%m/%Y %H:%M:%S'),
                 'datos_anteriores': log.datos_anteriores,
